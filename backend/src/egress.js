@@ -15,22 +15,39 @@ import { applyRxCursor } from './radio.js';
 const ACCEPTED_TYPES = new Set([MSG.SOS, MSG.UPDATE, MSG.MSG_OUT, MSG.CMD]);
 const ALL_CONTACTS_SMS = { contactMask: 0xffffffff, channels: 1, rxCursor: 0, note: null };
 
-function parseRequest(body) {
-  if (!body || typeof body !== 'object') throw new HttpError(400, 'body must be a JSON object');
-  const { packet_b64: rawB64, rx } = body;
+function decodePacketB64(rawB64) {
   if (typeof rawB64 !== 'string' || !rawB64) throw new HttpError(400, 'packet_b64 required');
   // android.util.Base64.DEFAULT inserta saltos de línea cada 76 caracteres: se ignoran los espacios.
   const b64 = rawB64.replace(/\s+/g, '');
   if (b64.length > Math.ceil(MAX_INNER_BYTES / 3) * 4 + 4) throw new HttpError(400, `packet > ${MAX_INNER_BYTES} B`);
   if (b64.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(b64)) throw new HttpError(400, 'packet_b64 is not valid base64');
-  const raw = Buffer.from(b64, 'base64');
-  if (!rx || typeof rx !== 'object') throw new HttpError(400, 'rx required');
-  if (typeof rx.egress_id !== 'string' || !rx.egress_id || rx.egress_id.length > 64) throw new HttpError(400, 'rx.egress_id required');
-  if (!Number.isInteger(rx.envelope_ttl) || rx.envelope_ttl < 0 || rx.envelope_ttl > 255) throw new HttpError(400, 'rx.envelope_ttl must be 0..255');
-  return { raw, egressId: rx.egress_id, envelopeTtl: rx.envelope_ttl, rxAt: Number.isInteger(rx.rx_at) ? rx.rx_at : null };
+  return Buffer.from(b64, 'base64');
 }
 
-const ackBody = (status, packet, ackB64) => ({ status, incident_id: packet.incidentId, seq: packet.seq, ack_packet_b64: ackB64 });
+function checkEgressId(id) {
+  if (typeof id !== 'string' || !id || id.length > 64) throw new HttpError(400, 'rx.egress_id required');
+}
+
+function checkEnvelopeTtl(ttl) {
+  if (!Number.isInteger(ttl) || ttl < 0 || ttl > 255) throw new HttpError(400, 'rx.envelope_ttl must be 0..255');
+}
+
+function parseRx(rx) {
+  if (!rx || typeof rx !== 'object') throw new HttpError(400, 'rx required');
+  checkEgressId(rx.egress_id);
+  checkEnvelopeTtl(rx.envelope_ttl);
+  return { egressId: rx.egress_id, envelopeTtl: rx.envelope_ttl, rxAt: Number.isInteger(rx.rx_at) ? rx.rx_at : null };
+}
+
+function parseRequest(body) {
+  if (!body || typeof body !== 'object') throw new HttpError(400, 'body must be a JSON object');
+  const raw = decodePacketB64(body.packet_b64);
+  return { raw, ...parseRx(body.rx) };
+}
+
+function ackBody(status, packet, ackB64) {
+  return { status, incident_id: packet.incidentId, seq: packet.seq, ack_packet_b64: ackB64 };
+}
 
 /** Plaintext del blob, o null si no abre o su formato no es el del tipo. */
 function openBlob(ctx, packet, parse) {
@@ -45,51 +62,74 @@ function openBlob(ctx, packet, parse) {
   }
 }
 
-export function handleEgress(ctx, body, limiter) {
-  const { raw, egressId, envelopeTtl, rxAt } = parseRequest(body);
-  const { rate } = ctx.config;
-  if (!limiter.hit(`egress:${egressId}`, rate.egressPerMin, 60)) throw new HttpError(429, 'rate limit (egress)');
+function hitLimit(limiter, key, max, who) {
+  if (!limiter.hit(key, max, 60)) throw new HttpError(429, `rate limit (${who})`);
+}
 
-  let packet;
+function decodeOrReject(raw) {
   try {
-    packet = decodePacket(raw);
+    return decodePacket(raw);
   } catch (e) {
     if (e instanceof PacketError) throw new HttpError(400, e.message);
     throw e;
   }
+}
+
+function checkAccepted(ctx, packet) {
   if (!ACCEPTED_TYPES.has(packet.msgType) || packet.senderId === ctx.keys.senderId) {
     throw new HttpError(400, `msg_type ${packet.msgType} is not accepted from egress`);
   }
+}
+
+function authenticate(ctx, packet) {
   const user = ctx.store.getUser(packet.senderId);
   if (!user) throw new HttpError(404, 'sender not registered');
   if (!verifyPacket(packet, user.sign_pk)) throw new HttpError(401, 'invalid signature');
-  // Un reenvío ya aceptado (R1) se responde antes de contar la tasa: varios egress pueden oír el mismo
-  // reintento y un 429/4xx haría que el egress descarte el paquete (R3).
-  const dup = ctx.store.getPacket(packet.senderId, packet.incidentId, packet.seq, packet.msgType);
-  if (dup) return { status: 200, body: ackBody('duplicate', packet, dup.ack_b64) };
-  if (!limiter.hit(`sender:${packet.senderId}`, rate.senderPerMin, 60)) throw new HttpError(429, 'rate limit (sender)');
+  return user;
+}
+
+function checkWindow(ctx, packet) {
   const now = ctx.now();
   if (packet.timestamp - now > ctx.config.futureSkewS || now - packet.timestamp > ctx.config.pastWindowS) {
     throw new HttpError(422, 'timestamp out of window');
   }
+}
 
-  const hops = Math.max(0, packet.ttl - envelopeTtl);
+/** Dentro de la transacción: procesa el paquete, guarda el ACK (idempotencia) y lo deja en el buzón. */
+function record(ctx, { packet, user, req, hops, work }) {
+  const { senderId, incidentId, seq } = packet;
+  const out = processPacket(ctx, packet, user, { hops, egressId: req.egressId, work });
+  const bytes = buildAck(ctx, { incidentId, seq, code: out.ackCode, text: out.ackText });
+  ctx.store.insertPacket({ senderId, incidentId, seq, msgType: packet.msgType, ackB64: bytes.toString('base64'),
+    egressId: req.egressId, envelopeTtl: req.envelopeTtl, hops, rxAt: req.rxAt });
+  // Las balizas (UPDATE) no necesitan ACK por buzón: la siguiente ocupa su lugar (R6).
+  if (packet.msgType !== MSG.UPDATE) queueAck(ctx, { senderId, incidentId, seq, code: out.ackCode, text: out.ackText });
+  ctx.emit('packet_received', { senderId, incidentId, data: { msg_type: packet.msgType, seq, hops, egress_id: req.egressId } });
+  return bytes;
+}
+
+function accept(ctx, { packet, user, req }) {
+  const hops = Math.max(0, packet.ttl - req.envelopeTtl);
   const work = { after: null };
-  const ack = ctx.store.tx(() => {
-    const out = processPacket(ctx, packet, user, { hops, egressId, work });
-    const bytes = buildAck(ctx, { incidentId: packet.incidentId, seq: packet.seq, code: out.ackCode, text: out.ackText });
-    ctx.store.insertPacket({ senderId: packet.senderId, incidentId: packet.incidentId, seq: packet.seq, msgType: packet.msgType,
-      ackB64: bytes.toString('base64'), egressId, envelopeTtl, hops, rxAt });
-    // Las balizas (UPDATE) no necesitan ACK por buzón: la siguiente ocupa su lugar (R6).
-    if (packet.msgType !== MSG.UPDATE) {
-      queueAck(ctx, { senderId: packet.senderId, incidentId: packet.incidentId, seq: packet.seq, code: out.ackCode, text: out.ackText });
-    }
-    ctx.emit('packet_received', { senderId: packet.senderId, incidentId: packet.incidentId,
-      data: { msg_type: packet.msgType, seq: packet.seq, hops, egress_id: egressId } });
-    return bytes;
-  });
+  const ack = ctx.store.tx(() => record(ctx, { packet, user, req, hops, work }));
   if (work.after) ctx.defer(work.after);
   return { status: 200, body: ackBody('accepted', packet, ack.toString('base64')) };
+}
+
+export function handleEgress(ctx, body, limiter) {
+  const req = parseRequest(body);
+  const { rate } = ctx.config;
+  hitLimit(limiter, `egress:${req.egressId}`, rate.egressPerMin, 'egress');
+  const packet = decodeOrReject(req.raw);
+  checkAccepted(ctx, packet);
+  const user = authenticate(ctx, packet);
+  // Un reenvío ya aceptado (R1) se responde antes de contar la tasa: varios egress pueden oír el mismo
+  // reintento y un 429/4xx haría que el egress descarte el paquete (R3).
+  const dup = ctx.store.getPacket(packet.senderId, packet.incidentId, packet.seq, packet.msgType);
+  if (dup) return { status: 200, body: ackBody('duplicate', packet, dup.ack_b64) };
+  hitLimit(limiter, `sender:${packet.senderId}`, rate.senderPerMin, 'sender');
+  checkWindow(ctx, packet);
+  return accept(ctx, { packet, user, req });
 }
 
 function processPacket(ctx, packet, user, { hops, egressId, work }) {
@@ -104,30 +144,46 @@ function processPacket(ctx, packet, user, { hops, egressId, work }) {
   }
 }
 
-function processSos(ctx, packet, user, { hops, egressId, work }) {
-  const parsed = openBlob(ctx, packet, parseSosPlaintext);
-  const plain = parsed ?? ALL_CONTACTS_SMS;
-  const { creado } = registrarIncidente(ctx, {
+function sosArgs(packet, parsed) {
+  return {
     sender_id: packet.senderId, incident_id: packet.incidentId, category: packet.category, severity: packet.severity,
     lat: packet.lat, lon: packet.lon, accuracy_m: packet.accuracyM, location_age_s: packet.locationAge,
     public_text: packet.publicText, ...(parsed ? { nota: parsed.note } : {}),
-  }, { hops, egressId, blobReadable: Boolean(parsed), seq: packet.seq, timestamp: packet.timestamp });
-  if (!parsed) ctx.emit('blob_unreadable', { senderId: packet.senderId, incidentId: packet.incidentId, data: { msg_type: packet.msgType } });
+  };
+}
 
+/** El recibo del origen (rx_cursor) detiene el envío por radio de lo que ya recibió. */
+function recordRxCursor(ctx, packet, parsed) {
+  if (!parsed) return;
   const incident = ctx.store.getIncident(packet.senderId, packet.incidentId);
-  if (parsed && parsed.rxCursor > incident.rx_cursor) {
-    ctx.store.updateIncident(packet.senderId, packet.incidentId, { rxCursor: parsed.rxCursor });
-    applyRxCursor(ctx, packet.senderId, packet.incidentId, parsed.rxCursor);
-  }
-  if (packet.severity === 0) return { ackCode: 0, ackText: 'Recibido. Incidente cerrado' };
+  if (parsed.rxCursor <= incident.rx_cursor) return;
+  ctx.store.updateIncident(packet.senderId, packet.incidentId, { rxCursor: parsed.rxCursor });
+  applyRxCursor(ctx, packet.senderId, packet.incidentId, parsed.rxCursor);
+}
 
-  // El agente corre una sola vez por incidente, aunque el SOS llegue después de una baliza.
+/** El agente corre una sola vez por incidente, aunque el SOS llegue después de una baliza. */
+function needsAgent(ctx, packet, created) {
+  return (created || packet.msgType === MSG.SOS) && ctx.store.listNotifications(packet.senderId, packet.incidentId).length === 0;
+}
+
+function agentTask(ctx, packet, plain) {
   const key = `${packet.senderId}:${packet.incidentId}`;
-  const needsAgent = (creado || packet.msgType === MSG.SOS) && ctx.store.listNotifications(packet.senderId, packet.incidentId).length === 0;
-  if (needsAgent) {
-    work.after = () => ctx.agentStarted.has(key) ? undefined : (ctx.agentStarted.add(key), runSosAgent(ctx, { senderId: packet.senderId, incidentId: packet.incidentId, seq: packet.seq,
-      contactMask: plain.contactMask, channels: plain.channels, note: plain.note }));
-  }
+  return () => {
+    if (ctx.agentStarted.has(key)) return undefined;
+    ctx.agentStarted.add(key);
+    return runSosAgent(ctx, { senderId: packet.senderId, incidentId: packet.incidentId, seq: packet.seq,
+      contactMask: plain.contactMask, channels: plain.channels, note: plain.note });
+  };
+}
+
+function processSos(ctx, packet, user, { hops, egressId, work }) {
+  const parsed = openBlob(ctx, packet, parseSosPlaintext);
+  const meta = { hops, egressId, blobReadable: Boolean(parsed), seq: packet.seq, timestamp: packet.timestamp };
+  const { creado } = registrarIncidente(ctx, sosArgs(packet, parsed), meta);
+  if (!parsed) ctx.emit('blob_unreadable', { senderId: packet.senderId, incidentId: packet.incidentId, data: { msg_type: packet.msgType } });
+  recordRxCursor(ctx, packet, parsed);
+  if (packet.severity === 0) return { ackCode: 0, ackText: 'Recibido. Incidente cerrado' };
+  if (needsAgent(ctx, packet, creado)) work.after = agentTask(ctx, packet, parsed ?? ALL_CONTACTS_SMS);
   return { ackCode: 2, ackText: 'Recibido. El agente gestiona tu caso' };
 }
 

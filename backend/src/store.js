@@ -44,6 +44,21 @@ CREATE TABLE IF NOT EXISTS radio_queue (
   UNIQUE (egress_id, mailbox_id));
 `;
 
+function channelValues(c) {
+  return { sms: c.channels.sms ?? null, email: c.channels.email ?? null, voice: c.channels.voice ?? null };
+}
+
+/** Un contacto conserva "verified" solo si no cambió ningún canal. */
+function keepsVerification(prev, ch) {
+  return Boolean(prev) && prev.sms === ch.sms && prev.email === ch.email && prev.voice === ch.voice;
+}
+
+function contactRow(senderId, c, prev) {
+  const ch = channelValues(c);
+  const status = keepsVerification(prev, ch) ? prev.status : 'pending_verification';
+  return [senderId, c.index, c.name, c.relation ?? null, c.lang ?? 'es', ch.sms, ch.email, ch.voice, status];
+}
+
 export class Store {
   constructor(path = ':memory:') {
     if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
@@ -82,24 +97,12 @@ export class Store {
 
   replaceContacts(senderId, contacts) {
     const existing = new Map(this.getContacts(senderId).map((c) => [c.idx, c]));
-    this.db.exec('BEGIN');
-    try {
+    this.tx(() => {
       this.db.prepare('DELETE FROM contacts WHERE sender_id = ?').run(senderId);
       const ins = this.db.prepare(`INSERT INTO contacts (sender_id, idx, name, relation, lang, sms, email, voice, status)
         VALUES (?,?,?,?,?,?,?,?,?)`);
-      for (const c of contacts) {
-        const prev = existing.get(c.index);
-        // Un contacto conserva "verified" solo si no cambió ningún canal.
-        const same = prev && prev.sms === (c.channels.sms ?? null) && prev.email === (c.channels.email ?? null)
-          && prev.voice === (c.channels.voice ?? null);
-        ins.run(senderId, c.index, c.name, c.relation ?? null, c.lang ?? 'es', c.channels.sms ?? null,
-          c.channels.email ?? null, c.channels.voice ?? null, same ? prev.status : 'pending_verification');
-      }
-      this.db.exec('COMMIT');
-    } catch (e) {
-      this.db.exec('ROLLBACK');
-      throw e;
-    }
+      for (const c of contacts) ins.run(...contactRow(senderId, c, existing.get(c.index)));
+    });
   }
 
   getContacts(senderId) {

@@ -427,3 +427,18 @@ test('config: cada variable de entorno tiene prioridad sobre su valor por defect
   const c = loadConfig({ DATABASE_PATH: '/x/y.db', BALIZA_KEY_FILE: '/x/k.json', CORS_ORIGIN: 'https://panel.example', ANTHROPIC_API_KEY: 'sk-test' });
   assert.deepEqual([c.dbPath, c.keyFile, c.corsOrigin, c.llm.apiKey], ['/x/y.db', '/x/k.json', 'https://panel.example', 'sk-test']);
 });
+
+test('registro: el índice de contacto debe ser entero entre 0 y 31', async () => {
+  const app = await startApp();
+  try {
+    const phone = makePhone(app);
+    const withIndex = (index) => signedCall(app, phone, 'POST', '/v1/users', registerBody(phone, { contacts: [{ index, name: 'A', channels: { sms: '1' } }] }));
+    for (const bad of [-1, 32, 1.5, '1', null]) {
+      const r = await withIndex(bad);
+      assert.equal(r.status, 400, `índice ${JSON.stringify(bad)}`);
+      assert.equal(r.json.error, 'contact.index must be 0..31');
+    }
+    assert.equal((await withIndex(0)).status, 201);
+    assert.equal((await withIndex(31)).status, 201);
+  } finally { app.close(); }
+});

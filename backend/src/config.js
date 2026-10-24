@@ -3,30 +3,56 @@ import { fileURLToPath } from 'node:url';
 
 // Datos por defecto junto al backend (no dependen del directorio desde el que se arranca).
 const DATA_DIR = fileURLToPath(new URL('../data/', import.meta.url));
+const TRUE_VALUES = new Set(['1', 'true', 'yes', 'on']);
+const DAY_S = 24 * 3600;
 
-const flag = (v) => ['1', 'true', 'yes', 'on'].includes(String(v ?? '').toLowerCase());
-const int = (v, dflt) => (v === undefined || v === '' || Number.isNaN(Number(v)) ? dflt : Number(v));
+function flag(v) {
+  return TRUE_VALUES.has(String(v ?? '').toLowerCase());
+}
 
-export function loadConfig(env = process.env) {
+function int(v, dflt) {
+  if (v === undefined || v === '' || Number.isNaN(Number(v))) return dflt;
+  return Number(v);
+}
+
+/** Texto de la variable, o `dflt` si falta o está vacía. */
+function str(v, dflt = null) {
+  return v || dflt;
+}
+
+function trimSlash(url) {
+  return url.replace(/\/$/, '');
+}
+
+function serverConfig(env) {
+  const port = int(env.PORT, 8080);
   return {
-    port: int(env.PORT, 8080),
-    dbPath: env.DATABASE_PATH || `${DATA_DIR}baliza.db`,
-    keyFile: env.BALIZA_KEY_FILE || `${DATA_DIR}server-keys.json`,
+    port,
+    dbPath: str(env.DATABASE_PATH, `${DATA_DIR}baliza.db`),
+    keyFile: str(env.BALIZA_KEY_FILE, `${DATA_DIR}server-keys.json`),
     // En Render, RENDER_EXTERNAL_URL trae la URL pública del servicio.
-    publicBaseUrl: (env.PUBLIC_BASE_URL || env.RENDER_EXTERNAL_URL || `http://localhost:${int(env.PORT, 8080)}`).replace(/\/$/, ''),
+    publicBaseUrl: trimSlash(str(env.PUBLIC_BASE_URL, str(env.RENDER_EXTERNAL_URL, `http://localhost:${port}`))),
     // Detrás de un proxy (Render) la IP del cliente viene en X-Forwarded-For.
     trustProxy: flag(env.TRUST_PROXY),
-    featurePayments: flag(env.FEATURE_PAYMENTS),
-    featureRides: flag(env.FEATURE_RIDES),
-    dashboardToken: env.DASHBOARD_TOKEN || null,
-    adminToken: env.ADMIN_TOKEN || null,
-    corsOrigin: env.CORS_ORIGIN || '*',
+    corsOrigin: str(env.CORS_ORIGIN, '*'),
+  };
+}
+
+function securityConfig(env) {
+  return {
+    dashboardToken: str(env.DASHBOARD_TOKEN),
+    adminToken: str(env.ADMIN_TOKEN),
     // Con canales reales, solo los contactos 'verified' reciben avisos (el registro es abierto: sin esto,
     // cualquiera podría hacer que el servidor envíe SMS o llame a números ajenos).
     allowUnverifiedContacts: flag(env.ALLOW_UNVERIFIED_CONTACTS),
+  };
+}
+
+function windowsConfig(env) {
+  return {
     futureSkewS: int(env.FUTURE_SKEW_S, 600),
-    pastWindowS: int(env.PAST_WINDOW_S, 7 * 24 * 3600),
-    mailboxRetentionS: int(env.MAILBOX_RETENTION_S, 24 * 3600),
+    pastWindowS: int(env.PAST_WINDOW_S, 7 * DAY_S),
+    mailboxRetentionS: int(env.MAILBOX_RETENTION_S, DAY_S),
     rate: {
       egressPerMin: int(env.RATE_EGRESS_PER_MIN, 120),
       senderPerMin: int(env.RATE_SENDER_PER_MIN, 30),
@@ -37,37 +63,54 @@ export function loadConfig(env = process.env) {
       cmdPerDay: int(env.CMD_MAX_PER_DAY, 10),
       cmdAmountPerDay: int(env.CMD_MAX_AMOUNT_PER_DAY, 500),
     },
-    llm: {
-      apiKey: env.ANTHROPIC_API_KEY || null,
-      model: env.ANTHROPIC_MODEL || 'claude-opus-5-5',
-      // El LLM nunca debe retrasar un aviso de emergencia: pasado este tiempo se usa la plantilla.
-      timeoutMs: int(env.LLM_TIMEOUT_MS, 6000),
-    },
-    smsProvider: env.SMS_PROVIDER || null, // 'twilio' fuerza Twilio aunque Kapso esté configurado
-    kapso: {
-      apiKey: env.KAPSO_API_KEY || null,
-      phoneNumberId: env.KAPSO_PHONE_NUMBER_ID || null,
-      baseUrl: (env.KAPSO_BASE_URL || 'https://api.kapso.ai/meta/whatsapp/v24.0').replace(/\/$/, ''),
-      webhookSecret: env.KAPSO_WEBHOOK_SECRET || null,
-      // Plantillas aprobadas (necesarias para escribir primero a alguien fuera de la ventana de 24 h).
-      templateAlert: env.KAPSO_TEMPLATE_ALERT || null,
-      templateMessage: env.KAPSO_TEMPLATE_MESSAGE || null,
-      templateLang: env.KAPSO_TEMPLATE_LANG || 'es',
-      templateLangEn: env.KAPSO_TEMPLATE_LANG_EN || null,
-    },
-    sms: {
-      sid: env.TWILIO_ACCOUNT_SID || null,
-      token: env.TWILIO_AUTH_TOKEN || null,
-      from: env.TWILIO_FROM || null,
-    },
-    email: {
-      apiKey: env.RESEND_API_KEY || null,
-      from: env.EMAIL_FROM || null,
-    },
+  };
+}
+
+function llmConfig(env) {
+  return {
+    apiKey: str(env.ANTHROPIC_API_KEY),
+    model: str(env.ANTHROPIC_MODEL, 'claude-opus-5-5'),
+    // El LLM nunca debe retrasar un aviso de emergencia: pasado este tiempo se usa la plantilla.
+    timeoutMs: int(env.LLM_TIMEOUT_MS, 6000),
+  };
+}
+
+function kapsoConfig(env) {
+  return {
+    apiKey: str(env.KAPSO_API_KEY),
+    phoneNumberId: str(env.KAPSO_PHONE_NUMBER_ID),
+    baseUrl: trimSlash(str(env.KAPSO_BASE_URL, 'https://api.kapso.ai/meta/whatsapp/v24.0')),
+    webhookSecret: str(env.KAPSO_WEBHOOK_SECRET),
+    // Plantillas aprobadas (necesarias para escribir primero a alguien fuera de la ventana de 24 h).
+    templateAlert: str(env.KAPSO_TEMPLATE_ALERT),
+    templateMessage: str(env.KAPSO_TEMPLATE_MESSAGE),
+    templateLang: str(env.KAPSO_TEMPLATE_LANG, 'es'),
+    templateLangEn: str(env.KAPSO_TEMPLATE_LANG_EN),
+  };
+}
+
+function channelsConfig(env) {
+  return {
+    smsProvider: str(env.SMS_PROVIDER), // 'twilio' fuerza Twilio aunque Kapso esté configurado
+    kapso: kapsoConfig(env),
+    sms: { sid: str(env.TWILIO_ACCOUNT_SID), token: str(env.TWILIO_AUTH_TOKEN), from: str(env.TWILIO_FROM) },
+    email: { apiKey: str(env.RESEND_API_KEY), from: str(env.EMAIL_FROM) },
     voice: {
-      apiKey: env.ELEVENLABS_API_KEY || null,
-      agentId: env.ELEVENLABS_AGENT_ID || null,
-      phoneNumberId: env.ELEVENLABS_PHONE_NUMBER_ID || null,
+      apiKey: str(env.ELEVENLABS_API_KEY),
+      agentId: str(env.ELEVENLABS_AGENT_ID),
+      phoneNumberId: str(env.ELEVENLABS_PHONE_NUMBER_ID),
     },
+  };
+}
+
+export function loadConfig(env = process.env) {
+  return {
+    ...serverConfig(env),
+    featurePayments: flag(env.FEATURE_PAYMENTS),
+    featureRides: flag(env.FEATURE_RIDES),
+    ...securityConfig(env),
+    ...windowsConfig(env),
+    llm: llmConfig(env),
+    ...channelsConfig(env),
   };
 }
