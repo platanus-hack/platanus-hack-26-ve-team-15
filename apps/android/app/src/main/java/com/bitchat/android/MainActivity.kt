@@ -5,6 +5,8 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.OnBackPressedCallback
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.baliza.emergency.ui.BalizaRoot
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -61,6 +63,7 @@ class MainActivity : OrientationAwareActivity() {
     private lateinit var meshService: BluetoothMeshService
     private lateinit var unifiedMeshService: MeshService
     private val mainViewModel: MainViewModel by viewModels()
+    private val balizaViewModel: com.baliza.emergency.ui.BalizaViewModel by viewModels()
     private var pendingMeshForegroundServiceStart = false
     private val chatViewModel: ChatViewModel by viewModels { 
         object : ViewModelProvider.Factory {
@@ -313,24 +316,18 @@ class MainActivity : OrientationAwareActivity() {
             }
 
             OnboardingState.CHECKING, OnboardingState.INITIALIZING, OnboardingState.COMPLETE -> {
-                // Set up back navigation handling for the chat screen
-                val backCallback = object : OnBackPressedCallback(true) {
-                    override fun handleOnBackPressed() {
-                        // Let ChatViewModel handle navigation state
-                        val handled = chatViewModel.handleBackPressed()
-                        if (!handled) {
-                            // If ChatViewModel doesn't handle it, disable this callback
-                            // and let the system handle it (which will exit the app)
-                            this.isEnabled = false
-                            onBackPressedDispatcher.onBackPressed()
-                            this.isEnabled = true
-                        }
+                // Baliza Vital's own interface is the home screen. bitchat's chat stays reachable from
+                // the debug panel (debug builds only) because its mesh engine still runs underneath.
+                var showBitchatChat by rememberSaveable { mutableStateOf(false) }
+                if (showBitchatChat) {
+                    androidx.activity.compose.BackHandler {
+                        // Let ChatViewModel handle navigation state; if it has nothing to close, go back to Baliza
+                        if (!chatViewModel.handleBackPressed()) showBitchatChat = false
                     }
+                    ChatScreen(viewModel = chatViewModel)
+                } else {
+                    BalizaRoot(vm = balizaViewModel, onOpenBitchat = { showBitchatChat = true })
                 }
-
-                // Add the callback - this will be automatically removed when the activity is destroyed
-                onBackPressedDispatcher.addCallback(this, backCallback)
-                ChatScreen(viewModel = chatViewModel)
             }
             
             OnboardingState.ERROR -> {

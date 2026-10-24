@@ -2,7 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <application>
+    <!-- Debug builds may talk to a backend on the LAN over plain HTTP; release builds may not. -->
+    <application android:usesCleartextTraffic="true">
         <!-- Debug-only ADB test hook. Drives mesh operations (scan, connect,
              handshake, DMs, files, broadcast, raw packets) from host scripts.
              Exported intentionally so `adb shell am broadcast` can reach it;
