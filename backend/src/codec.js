@@ -23,56 +23,79 @@ export class PacketError extends Error {
   }
 }
 
-export const sha256 = (...parts) => createHash('sha256').update(Buffer.concat(parts.map((p) => Buffer.from(p)))).digest();
+export function sha256(...parts) {
+  return createHash('sha256').update(Buffer.concat(parts.map((p) => Buffer.from(p)))).digest();
+}
 
 /** `sender_id = SHA-256(ed25519_pk)[0..8]` (§3.4), en hex. */
-export const senderIdOf = (signPk) => sha256(signPk).subarray(0, 8).toString('hex');
+export function senderIdOf(signPk) {
+  return sha256(signPk).subarray(0, 8).toString('hex');
+}
 
-export const ed25519PublicKey = (raw) => {
+export function ed25519PublicKey(raw) {
   if (raw.length !== 32) throw new PacketError('ed25519 pk must be 32 bytes');
   return createPublicKey({ key: Buffer.concat([SPKI_ED25519_PREFIX, raw]), format: 'der', type: 'spki' });
-};
+}
 
-const preimage = (unsigned) => Buffer.concat([DOMAIN, unsigned.subarray(0, 2), unsigned.subarray(3)]);
+function preimage(unsigned) {
+  return Buffer.concat([DOMAIN, unsigned.subarray(0, 2), unsigned.subarray(3)]);
+}
+
+function checkSize(buf) {
+  if (!Buffer.isBuffer(buf)) throw new PacketError('packet must be a Buffer');
+  if (buf.length > MAX_INNER_BYTES) throw new PacketError(`packet ${buf.length} B > ${MAX_INNER_BYTES} B`);
+  if (buf.length < FIXED_HEAD + 1 + 2 + SIGNATURE_BYTES) throw new PacketError('packet too short');
+}
+
+function checkFields(buf) {
+  if (buf[0] !== VERSION) throw new PacketError(`unsupported version ${buf[0]}`);
+  if (buf[1] < 1 || buf[1] > 7) throw new PacketError(`invalid msg_type ${buf[1]}`);
+  if (buf[39] > MAX_TEXT_BYTES) throw new PacketError('text_len > 60');
+  if (buf[14] > 3) throw new PacketError('invalid severity');
+}
+
+/** Dónde empieza el largo del blob y dónde la firma; valida que el largo total cuadre. */
+function locateBlob(buf) {
+  const blobLenAt = 40 + buf[39];
+  if (blobLenAt + 2 > buf.length) throw new PacketError('truncated packet');
+  const sigStart = blobLenAt + 2 + buf.readUInt16BE(blobLenAt);
+  if (sigStart + SIGNATURE_BYTES !== buf.length) throw new PacketError('length mismatch');
+  return { blobLenAt, sigStart };
+}
+
+function coordinate(v) {
+  return v === NO_LOCATION ? null : v;
+}
+
+function readHeader(buf) {
+  return {
+    version: buf[0],
+    msgType: buf[1],
+    ttl: buf[2],
+    incidentId: buf.subarray(3, 11).toString('hex'),
+    seq: buf.readUInt16BE(11),
+    category: buf[13],
+    severity: buf[14],
+    lat: coordinate(buf.readInt32BE(15)),
+    lon: coordinate(buf.readInt32BE(19)),
+    accuracyM: buf.readUInt16BE(23),
+    locationAge: buf.readUInt16BE(25),
+    timestamp: buf.readUInt32BE(27),
+    senderId: buf.subarray(31, 39).toString('hex'),
+  };
+}
 
 /**
  * Decodifica y valida la estructura. NO verifica la firma (necesita la llave del emisor).
  * Devuelve el paquete con `unsigned` (bytes firmados + ttl) para poder verificar después.
  */
 export function decodePacket(buf) {
-  if (!Buffer.isBuffer(buf)) throw new PacketError('packet must be a Buffer');
-  if (buf.length > MAX_INNER_BYTES) throw new PacketError(`packet ${buf.length} B > ${MAX_INNER_BYTES} B`);
-  if (buf.length < FIXED_HEAD + 1 + 2 + SIGNATURE_BYTES) throw new PacketError('packet too short');
-  if (buf[0] !== VERSION) throw new PacketError(`unsupported version ${buf[0]}`);
-  const msgType = buf[1];
-  if (msgType < 1 || msgType > 7) throw new PacketError(`invalid msg_type ${msgType}`);
-  const textLen = buf[39];
-  if (textLen > MAX_TEXT_BYTES) throw new PacketError('text_len > 60');
-  const blobLenAt = 40 + textLen;
-  if (blobLenAt + 2 > buf.length) throw new PacketError('truncated packet');
-  const blobLen = buf.readUInt16BE(blobLenAt);
-  const sigStart = blobLenAt + 2 + blobLen;
-  if (sigStart + SIGNATURE_BYTES !== buf.length) throw new PacketError('length mismatch');
-  const severity = buf[14];
-  if (severity > 3) throw new PacketError('invalid severity');
-  const publicText = buf.subarray(40, 40 + textLen);
-  const lat = buf.readInt32BE(15);
-  const lon = buf.readInt32BE(19);
+  checkSize(buf);
+  checkFields(buf);
+  const { blobLenAt, sigStart } = locateBlob(buf);
   return {
-    version: buf[0],
-    msgType,
-    ttl: buf[2],
-    incidentId: buf.subarray(3, 11).toString('hex'),
-    seq: buf.readUInt16BE(11),
-    category: buf[13],
-    severity,
-    lat: lat === NO_LOCATION ? null : lat,
-    lon: lon === NO_LOCATION ? null : lon,
-    accuracyM: buf.readUInt16BE(23),
-    locationAge: buf.readUInt16BE(25),
-    timestamp: buf.readUInt32BE(27),
-    senderId: buf.subarray(31, 39).toString('hex'),
-    publicText: publicText.toString('utf8'),
+    ...readHeader(buf),
+    publicText: buf.subarray(40, blobLenAt).toString('utf8'),
     sealedBlob: Buffer.from(buf.subarray(blobLenAt + 2, sigStart)),
     signature: Buffer.from(buf.subarray(sigStart)),
     unsigned: Buffer.from(buf.subarray(0, sigStart)),
@@ -89,13 +112,15 @@ export function verifyDetached(message, signature, signPk) {
   }
 }
 
-export const verifyPacket = (packet, signPk) => verifyDetached(preimage(packet.unsigned), packet.signature, signPk);
+export function verifyPacket(packet, signPk) {
+  return verifyDetached(preimage(packet.unsigned), packet.signature, signPk);
+}
 
-const hexBuf = (hex, bytes) => {
+function hexBuf(hex, bytes) {
   const b = Buffer.from(hex, 'hex');
   if (b.length !== bytes) throw new PacketError(`expected ${bytes} B hex id`);
   return b;
-};
+}
 
 /** Construye y firma un paquete. `signer` = { privateKey (KeyObject), senderId (hex) }. */
 export function encodePacket({
@@ -159,23 +184,33 @@ export function buildCmdResultPlaintext(ref, status, text) {
   return Buffer.concat([head, Buffer.from(text, 'utf8')]);
 }
 
-/** CMD: JSON UTF-8 {"cmd","ref","args"}. */
-export function parseCmdPlaintext(pt) {
-  let obj;
+function parseJsonText(buf) {
   try {
-    obj = JSON.parse(pt.toString('utf8'));
+    return JSON.parse(buf.toString('utf8'));
   } catch {
     throw new PacketError('CMD is not valid JSON');
   }
-  if (!obj || typeof obj !== 'object' || typeof obj.cmd !== 'string' || !Number.isInteger(obj.ref)) {
-    throw new PacketError('CMD needs cmd and integer ref');
-  }
-  const args = obj.args && typeof obj.args === 'object' && !Array.isArray(obj.args) ? obj.args : {};
-  return { cmd: obj.cmd, ref: obj.ref, args };
+}
+
+function isCommand(obj) {
+  return Boolean(obj) && typeof obj.cmd === 'string' && Number.isInteger(obj.ref);
+}
+
+function isPlainObject(v) {
+  return Boolean(v) && typeof v === 'object' && !Array.isArray(v);
+}
+
+/** CMD: JSON UTF-8 {"cmd","ref","args"}. */
+export function parseCmdPlaintext(pt) {
+  const obj = parseJsonText(pt);
+  if (!isCommand(obj)) throw new PacketError('CMD needs cmd and integer ref');
+  return { cmd: obj.cmd, ref: obj.ref, args: isPlainObject(obj.args) ? obj.args : {} };
 }
 
 /** Índices de contacto 0..31 contenidos en el bitmask. */
-export const contactIndicesOf = (mask) => Array.from({ length: 32 }, (_, i) => i).filter((i) => (mask >>> i) & 1);
+export function contactIndicesOf(mask) {
+  return Array.from({ length: 32 }, (_, i) => i).filter((i) => (mask >>> i) & 1);
+}
 
 /** Trunca a n bytes UTF-8 sin partir un carácter. */
 export function truncateUtf8(str, maxBytes) {

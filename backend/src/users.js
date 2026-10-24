@@ -38,27 +38,43 @@ function cleanString(v, field, max, { required = false } = {}) {
   return v.trim();
 }
 
+function checkContactIndex(c, seen) {
+  if (!Number.isInteger(c.index) || c.index < 0 || c.index >= MAX_CONTACTS) throw new HttpError(400, 'contact.index must be 0..31');
+  if (seen.has(c.index)) throw new HttpError(400, `duplicate contact index ${c.index}`);
+  seen.add(c.index);
+}
+
+function readChannels(c) {
+  const channels = {};
+  for (const k of CHANNEL_KEYS) {
+    const v = cleanString(c.channels?.[k], `contact.channels.${k}`, 120);
+    if (v) channels[k] = v;
+  }
+  if (!Object.keys(channels).length) throw new HttpError(400, `contact ${c.index} needs at least one channel`);
+  return channels;
+}
+
+function normalizeContact(c, seen) {
+  if (!c || typeof c !== 'object') throw new HttpError(400, 'invalid contact');
+  checkContactIndex(c, seen);
+  return {
+    index: c.index,
+    name: cleanString(c.name, 'contact.name', 80, { required: true }),
+    relation: cleanString(c.relation, 'contact.relation', 40),
+    lang: cleanString(c.lang, 'contact.lang', 8) ?? 'es',
+    channels: readChannels(c),
+  };
+}
+
 export function validateContacts(list) {
   if (!Array.isArray(list) || list.length > MAX_CONTACTS) throw new HttpError(400, `contacts must be an array up to ${MAX_CONTACTS}`);
   const seen = new Set();
-  return list.map((c) => {
-    if (!c || typeof c !== 'object') throw new HttpError(400, 'invalid contact');
-    if (!Number.isInteger(c.index) || c.index < 0 || c.index >= MAX_CONTACTS) throw new HttpError(400, 'contact.index must be 0..31');
-    if (seen.has(c.index)) throw new HttpError(400, `duplicate contact index ${c.index}`);
-    seen.add(c.index);
-    const channels = {};
-    for (const k of CHANNEL_KEYS) {
-      const v = cleanString(c.channels?.[k], `contact.channels.${k}`, 120);
-      if (v) channels[k] = v;
-    }
-    if (!Object.keys(channels).length) throw new HttpError(400, `contact ${c.index} needs at least one channel`);
-    const lang = cleanString(c.lang, 'contact.lang', 8) ?? 'es';
-    return { index: c.index, name: cleanString(c.name, 'contact.name', 80, { required: true }),
-      relation: cleanString(c.relation, 'contact.relation', 40), lang, channels };
-  });
+  return list.map((c) => normalizeContact(c, seen));
 }
 
-const contactsView = (ctx, senderId) => ctx.store.getContacts(senderId).map((c) => ({ index: c.idx, status: c.status }));
+function contactsView(ctx, senderId) {
+  return ctx.store.getContacts(senderId).map((c) => ({ index: c.idx, status: c.status }));
+}
 
 export function registerUser(ctx, { rawBody, pubkeyB64, signatureB64 }) {
   const pk = checkProofOfPossession(rawBody, pubkeyB64, signatureB64);

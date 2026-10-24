@@ -7,7 +7,7 @@ Implementa `docs/contrato.md` (v1). Node ≥ 22.13, ESM, sin framework: `node:ht
 ```bash
 cd backend
 npm install
-npm test                         # 112 pruebas, sin red ni credenciales
+npm test                         # 132 pruebas, sin red ni credenciales
 npm start                        # :8080 (PORT), datos en backend/data/ (fuera de git)
 node scripts/post-vector.mjs     # prueba extremo a extremo contra el servidor local
 ```
@@ -26,7 +26,8 @@ node scripts/post-vector.mjs     # prueba extremo a extremo contra el servidor l
 | `src/commands.js` | `CMD` → `CMD_RESULT`: mocks de pagos/rides tras feature flags, topes e idempotencia |
 | `src/replies.js` | Respuestas de contactos → `MSG_IN` sellado al usuario |
 | `src/channels.js`, `src/llm.js` | SMS (Twilio), correo (Resend), voz (ElevenLabs), redactor con Claude |
-| `src/api.js` | Rutas, dashboard (`/v1/incidents`, `/v1/stream`), ensamblado |
+| `src/api.js` | Ensamblado de la app (contexto + servidor HTTP) |
+| `src/routes/` | Rutas por tema: `users`, `mesh` (egress, buzón, presencia), `replies`, `admin`, `dashboard` (`/v1/incidents`, `/v1/stream`) |
 
 ## Orden de comprobaciones de `POST /v1/egress`
 

@@ -8,9 +8,12 @@
 // canales con plantillas (WhatsApp fuera de la ventana de 24 h). El bit `sms` del contrato (channels & 1)
 // se entrega por WhatsApp (Kapso) si está configurado; si no, por SMS (Twilio).
 
-const digits = (s) => String(s ?? '').replace(/\D/g, '');
 const WINDOW_S = 24 * 3600;
 const DETAIL_MAX = 160;
+
+function digits(s) {
+  return String(s ?? '').replace(/\D/g, '');
+}
 
 async function postJson(url, headers, body, fetchImpl) {
   const res = await fetchImpl(url, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) });
@@ -47,7 +50,9 @@ function twilioSms(cfg, fetchImpl) {
 }
 
 // Los parámetros de plantilla de WhatsApp no admiten saltos de línea ni tabuladores.
-const templateText = (v, max = 300) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, max) || '-';
+function templateText(v, max = 300) {
+  return String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, max) || '-';
+}
 
 export function templateParams(kind, f) {
   const list = kind === 'alert'
@@ -56,45 +61,63 @@ export function templateParams(kind, f) {
   return list.map((v) => ({ type: 'text', text: templateText(v) }));
 }
 
+function waBase(to) {
+  return { messaging_product: 'whatsapp', recipient_type: 'individual', to };
+}
+
+function waText(wa, to, text) {
+  return postJson(wa.url, wa.headers, { ...waBase(to), type: 'text', text: { body: text, preview_url: false } }, wa.fetchImpl);
+}
+
+function templateLanguage(cfg, lang) {
+  return lang === 'en' && cfg.templateLangEn ? cfg.templateLangEn : cfg.templateLang;
+}
+
+function waTemplate(wa, to, { name, kind, fields, lang }) {
+  const template = {
+    name, language: { code: templateLanguage(wa.cfg, lang) }, components: [{ type: 'body', parameters: templateParams(kind, fields) }],
+  };
+  return postJson(wa.url, wa.headers, { ...waBase(to), type: 'template', template }, wa.fetchImpl);
+}
+
+/** ¿El contacto nos escribió hace menos de 24 h? Entonces se puede enviar texto libre. */
+function windowOpen(wa, num) {
+  return (wa.store.getWaInbound(num) ?? 0) >= wa.now() - WINDOW_S;
+}
+
+/** Dentro de la ventana: texto libre primero. Fuera: plantilla primero; el texto queda como último recurso. */
+function attemptOrder(isOpen, templateName) {
+  return (isOpen ? ['text', 'template'] : ['template', 'text']).filter((how) => how === 'text' || templateName);
+}
+
+function sentDetail(how, res) {
+  const wamid = res.messages?.[0]?.id;
+  return `kapso-whatsapp:${how}${wamid ? `:wamid:${wamid}` : ''}`;
+}
+
+async function sendWhatsApp(wa, { to, text, kind = 'alert', fields = {}, lang }) {
+  const num = digits(to);
+  const name = kind === 'alert' ? wa.cfg.templateAlert : wa.cfg.templateMessage;
+  let lastError = 'no attempt';
+  for (const how of attemptOrder(windowOpen(wa, num), name)) {
+    try {
+      const res = how === 'text' ? await waText(wa, num, text) : await waTemplate(wa, num, { name, kind, fields, lang });
+      return { state: 'sent', detail: sentDetail(how, res) };
+    } catch (e) {
+      lastError = `${how}: ${e.message}`.slice(0, DETAIL_MAX);
+    }
+  }
+  return { state: 'failed', detail: lastError };
+}
+
 /**
  * WhatsApp Cloud API a través de Kapso (Meta proxy): `POST {base}/{phone_number_id}/messages`, cabecera
  * `X-API-Key`. Dentro de las 24 h desde el último mensaje del contacto se envía texto libre; fuera, hace
  * falta una plantilla aprobada (KAPSO_TEMPLATE_ALERT / KAPSO_TEMPLATE_MESSAGE).
  */
 export function kapsoWhatsApp(cfg, fetchImpl, { store, now }) {
-  const url = `${cfg.baseUrl}/${cfg.phoneNumberId}/messages`;
-  const headers = { 'x-api-key': cfg.apiKey };
-  const base = (to) => ({ messaging_product: 'whatsapp', recipient_type: 'individual', to });
-  const attemptText = (to, text) => postJson(url, headers, { ...base(to), type: 'text', text: { body: text, preview_url: false } }, fetchImpl);
-  const attemptTemplate = (to, name, kind, fields, lang) => postJson(url, headers, {
-    ...base(to), type: 'template',
-    template: { name, language: { code: lang }, components: [{ type: 'body', parameters: templateParams(kind, fields) }] },
-  }, fetchImpl);
-
-  return {
-    name: 'sms',
-    live: true,
-    async send({ to, text, kind = 'alert', fields = {}, lang }) {
-      const num = digits(to);
-      const templateName = kind === 'alert' ? cfg.templateAlert : cfg.templateMessage;
-      const windowOpen = (store.getWaInbound(num) ?? 0) >= now() - WINDOW_S;
-      // Dentro de la ventana: texto libre primero. Fuera: plantilla primero; el texto queda como último recurso.
-      const tries = (windowOpen ? ['text', 'template'] : ['template', 'text']).filter((how) => how === 'text' || templateName);
-      let lastError = 'no attempt';
-      for (const how of tries) {
-        try {
-          const res = how === 'text'
-            ? await attemptText(num, text)
-            : await attemptTemplate(num, templateName, kind, fields, lang === 'en' && cfg.templateLangEn ? cfg.templateLangEn : cfg.templateLang);
-          const wamid = res.messages?.[0]?.id;
-          return { state: 'sent', detail: `kapso-whatsapp:${how}${wamid ? `:wamid:${wamid}` : ''}` };
-        } catch (e) {
-          lastError = `${how}: ${e.message}`.slice(0, DETAIL_MAX);
-        }
-      }
-      return { state: 'failed', detail: lastError };
-    },
-  };
+  const wa = { cfg, fetchImpl, store, now, url: `${cfg.baseUrl}/${cfg.phoneNumberId}/messages`, headers: { 'x-api-key': cfg.apiKey } };
+  return { name: 'sms', live: true, send: (message) => sendWhatsApp(wa, message) };
 }
 
 function resendEmail(cfg, fetchImpl) {
@@ -136,17 +159,30 @@ function elevenLabsVoice(cfg, fetchImpl) {
   };
 }
 
+function isKapsoReady(config, store) {
+  return Boolean(config.kapso.apiKey && config.kapso.phoneNumberId && store);
+}
+
+function isTwilioReady({ sms }) {
+  return Boolean(sms.sid && sms.token && sms.from);
+}
+
+/** El bit «sms» del contrato: WhatsApp (Kapso) si está configurado, si no Twilio, si no consola. */
+function textChannel(config, { fetchImpl, log, store, now }) {
+  if (isKapsoReady(config, store) && config.smsProvider !== 'twilio') return kapsoWhatsApp(config.kapso, fetchImpl, { store, now });
+  if (isTwilioReady(config)) return twilioSms(config.sms, fetchImpl);
+  return consoleChannel('sms', log);
+}
+
+function emailChannel({ email }, { fetchImpl, log }) {
+  return email.apiKey && email.from ? resendEmail(email, fetchImpl) : consoleChannel('email', log);
+}
+
+function voiceChannel({ voice }, { fetchImpl, log }) {
+  return voice.apiKey && voice.agentId && voice.phoneNumberId ? elevenLabsVoice(voice, fetchImpl) : consoleChannel('voice', log);
+}
+
 export function buildChannels(config, { fetchImpl = fetch, log = console.log, store, now = () => Math.floor(Date.now() / 1000) } = {}) {
-  const { sms, email, voice, kapso } = config;
-  const kapsoReady = kapso.apiKey && kapso.phoneNumberId && store;
-  const twilioReady = sms.sid && sms.token && sms.from;
-  let text;
-  if (kapsoReady && config.smsProvider !== 'twilio') text = kapsoWhatsApp(kapso, fetchImpl, { store, now });
-  else if (twilioReady) text = twilioSms(sms, fetchImpl);
-  else text = consoleChannel('sms', log);
-  return {
-    sms: text,
-    email: email.apiKey && email.from ? resendEmail(email, fetchImpl) : consoleChannel('email', log),
-    voice: voice.apiKey && voice.agentId && voice.phoneNumberId ? elevenLabsVoice(voice, fetchImpl) : consoleChannel('voice', log),
-  };
+  const deps = { fetchImpl, log, store, now };
+  return { sms: textChannel(config, deps), email: emailChannel(config, deps), voice: voiceChannel(config, deps) };
 }

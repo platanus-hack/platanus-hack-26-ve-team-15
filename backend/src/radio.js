@@ -120,38 +120,67 @@ export function startRadioTimer(ctx, everyMs = 60_000) {
 
 // --- HTTP ----------------------------------------------------------------------------------
 
-export function recordPresence(ctx, body, limiter) {
+function isEgressId(id) {
+  return typeof id === 'string' && id.length > 0 && id.length <= 64;
+}
+
+function isCell(cell) {
+  return typeof cell === 'string' && CELL_RE.test(cell);
+}
+
+function isValidity(v) {
+  return Number.isInteger(v) && v >= 1 && v <= 300;
+}
+
+function parsePresence(body) {
   if (!body || typeof body !== 'object') throw new HttpError(400, 'body must be a JSON object');
   const { egress_id: egressId, cell, valid_s: validS } = body;
-  if (typeof egressId !== 'string' || !egressId || egressId.length > 64) throw new HttpError(400, 'egress_id required');
-  if (typeof cell !== 'string' || !CELL_RE.test(cell)) throw new HttpError(400, 'cell must be a 6-char geohash');
-  if (!Number.isInteger(validS) || validS < 1 || validS > 300) throw new HttpError(400, 'valid_s must be 1..300');
-  if (!limiter.hit(`egress:${egressId}`, ctx.config.rate.egressPerMin, 60)) throw new HttpError(429, 'rate limit (egress)');
+  if (!isEgressId(egressId)) throw new HttpError(400, 'egress_id required');
+  if (!isCell(cell)) throw new HttpError(400, 'cell must be a 6-char geohash');
+  if (!isValidity(validS)) throw new HttpError(400, 'valid_s must be 1..300');
+  return { egressId, cell, validS };
+}
+
+function hitEgressLimit(ctx, limiter, key) {
+  if (!limiter.hit(key, ctx.config.rate.egressPerMin, 60)) throw new HttpError(429, 'rate limit (egress)');
+}
+
+export function recordPresence(ctx, body, limiter) {
+  const { egressId, cell, validS } = parsePresence(body);
+  hitEgressLimit(ctx, limiter, `egress:${egressId}`);
   ctx.store.upsertPresence({ egressId, cell, validUntil: ctx.now() + validS });
 }
 
-const toMessage = (m) => ({ id: `m_${String(m.id).padStart(4, '0')}`, msg_type: m.msg_type, incident_id: m.incident_id, packet_b64: m.packet_b64 });
+function toMessage(m) {
+  return { id: `m_${String(m.id).padStart(4, '0')}`, msg_type: m.msg_type, incident_id: m.incident_id, packet_b64: m.packet_b64 };
+}
+
+/** Saca de la cola lo pendiente para este egress y lo marca como entregado. */
+function takeQueued(ctx, egressId) {
+  const rows = ctx.store.drainRadio(egressId, ctx.now() - ctx.config.mailboxRetentionS);
+  if (rows.length) ctx.store.ackRadio(rows.map((r) => r.qid));
+  return rows;
+}
+
+/** Espera hasta `ms` o a que llegue algo para este egress. */
+function waitForRadio(ctx, egressId, ms) {
+  return new Promise((resolve) => {
+    const done = () => { clearTimeout(timer); ctx.bus.off('radio', onRadio); resolve(); };
+    const onRadio = (targets) => { if (targets.includes(egressId)) done(); };
+    const timer = setTimeout(done, ms);
+    ctx.bus.on('radio', onRadio);
+  });
+}
 
 /** Long-poll de hasta `wait` s (máx. 25): devuelve lo que haya en cola para este egress. */
 export async function readInbox(ctx, egressId, waitS, limiter) {
   if (!egressId || egressId.length > 64) throw new HttpError(400, 'egress_id required');
-  if (!limiter.hit(`inbox:${egressId}`, ctx.config.rate.egressPerMin, 60)) throw new HttpError(429, 'rate limit (egress)');
-  const since = () => ctx.now() - ctx.config.mailboxRetentionS;
-  const take = () => {
-    const rows = ctx.store.drainRadio(egressId, since());
-    if (rows.length) ctx.store.ackRadio(rows.map((r) => r.qid));
-    return rows;
-  };
-  let rows = take();
+  hitEgressLimit(ctx, limiter, `inbox:${egressId}`);
+  let rows = takeQueued(ctx, egressId);
   const deadline = Date.now() + Math.min(Math.max(waitS, 0), 25) * 1000;
   while (!rows.length && Date.now() < deadline) {
-    await new Promise((resolve) => {
-      const done = () => { clearTimeout(timer); ctx.bus.off('radio', onRadio); resolve(); };
-      const onRadio = (targets) => { if (targets.includes(egressId)) done(); };
-      const timer = setTimeout(done, Math.min(deadline - Date.now(), 1000));
-      ctx.bus.on('radio', onRadio);
-    });
-    rows = take();
+    await waitForRadio(ctx, egressId, Math.min(deadline - Date.now(), 1000));
+    rows = takeQueued(ctx, egressId);
   }
   return { messages: rows.map(toMessage) };
 }

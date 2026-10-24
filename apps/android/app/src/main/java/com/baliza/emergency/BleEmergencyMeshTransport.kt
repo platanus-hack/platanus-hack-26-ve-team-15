@@ -28,19 +28,30 @@ class BleEmergencyMeshTransport(
     private val _newNeighbors = MutableSharedFlow<Unit>(extraBufferCapacity = 8, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     override val newNeighbors: Flow<Unit> = _newNeighbors
 
-    init {
-        // Runs on a per-peer mesh worker: tryEmit never suspends, so it cannot stall the mesh.
-        attachSink(EmergencyPacketSink { routed ->
-            _incoming.tryEmit(
-                ReceivedEmergencyPacket(
-                    payload = routed.packet.payload,
-                    envelopeTtl = routed.packet.ttl.toInt(),
-                    senderPeerId = routed.peerID,
-                    linkAddress = routed.relayAddress
-                )
+    // Runs on a per-peer mesh worker: tryEmit never suspends, so it cannot stall the mesh.
+    private val sink = EmergencyPacketSink { routed ->
+        _incoming.tryEmit(
+            ReceivedEmergencyPacket(
+                payload = routed.packet.payload,
+                envelopeTtl = routed.packet.ttl.toInt(),
+                senderPeerId = routed.peerID,
+                linkAddress = routed.relayAddress
             )
-        })
-        attachNeighborListener { _newNeighbors.tryEmit(Unit) }
+        )
+    }
+    private val neighborCallback: () -> Unit = { _newNeighbors.tryEmit(Unit) }
+
+    init {
+        rebind()
+    }
+
+    /**
+     * Attaches the hooks again. Needed when the mesh service instance was replaced (MeshServiceHolder
+     * may do that), because the hooks are single slots on the instance and the old one is dead.
+     */
+    fun rebind() {
+        attachSink(sink)
+        attachNeighborListener(neighborCallback)
     }
 
     override suspend fun send(payload: ByteArray, ttl: Int): SendResult {
@@ -60,10 +71,13 @@ class BleEmergencyMeshTransport(
         private const val INCOMING_BUFFER = 64
         private const val MAX_ENVELOPE_TTL = 255
 
-        fun over(mesh: BluetoothMeshService) = BleEmergencyMeshTransport(
-            attachSink = mesh::setEmergencySink,
-            attachNeighborListener = mesh::setEmergencyNeighborListener,
-            sendRaw = mesh::sendEmergencyPacket
+        fun over(mesh: BluetoothMeshService) = over { mesh }
+
+        /** For a mesh instance that may be swapped: [current] is asked every time it is needed. */
+        fun over(current: () -> BluetoothMeshService) = BleEmergencyMeshTransport(
+            attachSink = { current().setEmergencySink(it) },
+            attachNeighborListener = { current().setEmergencyNeighborListener(it) },
+            sendRaw = { payload, ttl -> current().sendEmergencyPacket(payload, ttl) }
         )
     }
 }
