@@ -69,7 +69,7 @@ PUBLIC_BASE_URL=https://tu-deploy     # base de los enlaces /r/<token>; en Rende
 CORS_ORIGIN=*
 BALIZA_NOW=                           # solo pruebas: fija el reloj (epoch s) para los vectores congelados
 # Seguridad
-ADMIN_TOKEN=                          # habilita /v1/admin/*, /v1/dev/simulate-reply y /v1/webhooks/sms
+ADMIN_TOKEN=                          # habilita TODAS las rutas /v1/admin/*, /v1/dev/* y /v1/webhooks/sms; sin él devuelven 404
 DASHBOARD_TOKEN=                      # si se define, /v1/incidents y /v1/stream exigen Bearer o ?token=
 ALLOW_UNVERIFIED_CONTACTS=false       # true: los canales REALES también contactan a no verificados (solo demo cerrado)
 LLM_TIMEOUT_MS=6000                   # pasado este tiempo el aviso sale con la plantilla

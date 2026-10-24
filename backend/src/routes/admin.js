@@ -1,4 +1,4 @@
-// Administración y demo (requieren ADMIN_TOKEN si está configurado).
+// Administración y demo: todas exigen ADMIN_TOKEN y no existen (404) si no está configurado.
 import { executeCommand } from '../commands.js';
 import { HttpError } from '../http.js';
 import { ingestReply } from '../replies.js';
@@ -26,7 +26,7 @@ function simulateReplyHandler({ ctx, config }) {
 
 function dispatchRideHandler({ ctx, config }) {
   return async (c) => {
-    if (config.adminToken) requireAdmin(config, c);
+    requireAdmin(config, c);
     const { json } = await jsonBody(c.req);
     const user = ctx.store.getUser(json.sender_id);
     if (!user) throw new HttpError(404, 'user not found');
@@ -43,7 +43,7 @@ function dispatchRideHandler({ ctx, config }) {
 
 function clearDemoHandler({ ctx, config }) {
   return async (c) => {
-    if (config.adminToken) requireAdmin(config, c);
+    requireAdmin(config, c);
     ctx.store.clearDemoData?.();
     c.send(200, { ok: true, cleared: true });
   };
@@ -61,7 +61,7 @@ function runSimulationHandler({ ctx, config }) {
       stdio: 'ignore',
     });
     child.unref();
-    c.send(200, { ok: true, started: true });
+    c.send(200, { ok: false, started: true });
   };
 }
 
