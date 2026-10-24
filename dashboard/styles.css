@@ -62,6 +62,23 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .conn[data-state="live"] i { background: var(--ok); box-shadow: 0 0 8px var(--ok); animation: blink 2.4s ease-in-out infinite; }
 .conn[data-state="down"] i { background: var(--bad); }
 
+.mode-switch { display: inline-flex; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border); border-radius: 10px; padding: 2px; }
+.mode-btn { background: none; border: 0; padding: 5px 12px; border-radius: 8px; color: var(--muted); font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+.mode-btn.on { background: var(--surface-2); color: var(--text); font-weight: 600; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); }
+#btn-mode-real.on { color: #f87171; background: rgba(239, 68, 68, 0.18); }
+#btn-mode-demo.on { color: var(--accent); background: rgba(6, 182, 212, 0.18); }
+
+.mode-banner { padding: 8px 20px; font-size: 12px; border-bottom: 1px solid var(--border); }
+.mode-banner.demo-banner { background: rgba(6, 182, 212, 0.05); }
+.mode-banner.real-banner { background: rgba(239, 68, 68, 0.07); border-bottom-color: rgba(239, 68, 68, 0.25); }
+.banner-content { display: flex; align-items: center; gap: 12px; width: 100%; flex-wrap: wrap; }
+.badge-mode { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; letter-spacing: 0.05em; text-transform: uppercase; }
+.badge-mode.demo { background: rgba(6, 182, 212, 0.2); color: var(--accent); border: 1px solid rgba(6, 182, 212, 0.4); }
+.badge-mode.real { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+.banner-text { color: var(--muted); font-size: 12px; flex: 1; }
+.banner-actions { display: flex; gap: 8px; }
+.btn.sm { padding: 4px 10px; font-size: 11.5px; border-radius: 7px; }
+
 .btn { border: 1px solid var(--border); background: var(--surface); border-radius: 10px; padding: 7px 14px; transition: transform 0.15s, background 0.15s; }
 .btn:hover { background: var(--surface-2); transform: translateY(-1px); }
 .btn:active { transform: scale(0.97); }
@@ -74,7 +91,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   flex: 1; min-height: 0;
   display: grid; grid-template-columns: 340px minmax(0, 1fr) 390px; gap: 14px;
   padding: 14px 20px 20px;
-  height: calc(100vh - 64px);
+  height: calc(100vh - 105px);
 }
 .panel {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
@@ -161,7 +178,7 @@ td { padding: 5px 6px 5px 0; border-top: 1px solid var(--border); vertical-align
 .timeline time { color: var(--muted); font-size: 11px; display: block; }
 
 .reply-form { display: flex; gap: 8px; margin-top: 10px; }
-.reply-form input, .settings input { flex: 1; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border); color: var(--text); border-radius: 9px; padding: 7px 10px; font: inherit; }
+.reply-form input, .settings input, .settings select { flex: 1; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border); color: var(--text); border-radius: 9px; padding: 7px 10px; font: inherit; }
 .mock { border: 1px dashed color-mix(in srgb, var(--warn) 55%, transparent); border-radius: 10px; padding: 8px 10px; margin-top: 6px; color: var(--text); background: color-mix(in srgb, var(--warn) 8%, transparent); }
 
 /* --- ajustes y avisos ---------------------------------------------------- */
@@ -183,6 +200,15 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(3px); }
 @keyframes shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
 @keyframes slide-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* --- modal qr ------------------------------------------------------------- */
+.qr-modal { padding: 22px; text-align: center; max-width: 380px; width: 92vw; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.qr-subtitle { font-size: 12px; color: var(--muted); margin: 0; line-height: 1.4; }
+.qr-box { background: #fff; padding: 10px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); display: flex; }
+.qr-box img { display: block; border-radius: 6px; }
+.qr-url { font-size: 11px; color: var(--accent); word-break: break-all; text-decoration: none; }
+.qr-url:hover { text-decoration: underline; }
+.qr-actions { width: 100%; display: flex; justify-content: center; margin-top: 4px; }
 
 /* --- adaptable ----------------------------------------------------------- */
 @media (max-width: 1180px) {
