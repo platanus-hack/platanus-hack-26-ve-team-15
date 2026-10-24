@@ -76,6 +76,23 @@ function llmConfig(env) {
   };
 }
 
+/**
+ * Consultas a la IA desde el mesh (CMD `preguntar_ia`). Los límites de tamaño los fija el paquete
+ * (contrato §2.1: ≤ 264 B de plaintext en CMD y CMD_RESULT), así que no se configuran por entorno.
+ */
+function askConfig(env) {
+  return {
+    enabled: flag(env.FEATURE_ASK_AI),
+    model: str(env.ANTHROPIC_ASK_MODEL, 'claude-haiku-5-5'),
+    maxQuestionChars: 200,
+    maxQuestionBytes: 210,
+    maxAnswerBytes: 250,
+    timeoutMs: int(env.ASK_TIMEOUT_MS, 15000),
+    perDay: int(env.ASK_MAX_PER_DAY, 20),
+    maxConcurrent: int(env.ASK_MAX_CONCURRENT, 4),
+  };
+}
+
 function kapsoConfig(env) {
   return {
     apiKey: str(env.KAPSO_API_KEY),
@@ -112,6 +129,7 @@ export function loadConfig(env = process.env) {
     ...securityConfig(env),
     ...windowsConfig(env),
     llm: llmConfig(env),
+    ask: askConfig(env),
     ...channelsConfig(env),
   };
 }

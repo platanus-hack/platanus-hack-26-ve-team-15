@@ -23,12 +23,12 @@ export function fakeChannels() {
   return { sent, sms: mk('sms'), email: mk('email'), voice: mk('voice') };
 }
 
-export async function startApp({ env = {}, now = T0 + 30, channels = fakeChannels(), writer } = {}) {
+export async function startApp({ env = {}, now = T0 + 30, channels = fakeChannels(), writer, asker } = {}) {
   const clock = { t: now };
   const config = loadConfig({ ADMIN_TOKEN: 'admin-secret', ...env });
   const store = new Store(':memory:');
   const keys = loadServerKeys({ env: {} });
-  const app = createApp({ config, store, keys, channels, writer: writer ?? (async (_p, fallback) => fallback), now: () => clock.t, log: () => {} });
+  const app = createApp({ config, store, keys, channels, writer: writer ?? (async (_p, fallback) => fallback), asker, now: () => clock.t, log: () => {} });
   app.server.listen(0);
   await once(app.server, 'listening');
   const base = `http://127.0.0.1:${app.server.address().port}`;

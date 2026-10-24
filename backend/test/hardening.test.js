@@ -168,7 +168,7 @@ test('tokens de respuesta: solo cadenas válidas y cortas; ida y vuelta', async 
 test('/health expone las banderas de las fases 4 y 5; el detalle trae los contactos', async () => {
   const { app, phone } = await setup({ env: { FEATURE_RIDES: 'true' } });
   try {
-    assert.deepEqual((await app.call('GET', '/health')).json.features, { payments: false, rides: true });
+    assert.deepEqual((await app.call('GET', '/health')).json.features, { payments: false, rides: true, ask_ai: false });
     await sos(app, phone);
     const d = (await app.call('GET', `/v1/incidents/${phone.senderId}/${phone.incidentId}`)).json;
     assert.deepEqual(d.contacts.map((c) => [c.idx, c.name, c.status]), [[0, 'Contacto Demo Uno', 'pending_verification'], [1, 'Contacto Demo Dos', 'pending_verification']]);

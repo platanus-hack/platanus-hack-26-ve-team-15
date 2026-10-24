@@ -144,7 +144,7 @@ Para los tipos 5 y 7 el `seq` es un contador del servidor por incidente, indepen
 teléfono. Con `rx_cursor` en el plaintext, la nota de SOS/UPDATE admite como máximo 197 B.
 En un UPDATE, `severity = 0` significa que el usuario cerró el incidente (R6).
 `status` de CMD_RESULT: `0` ok, `1` rechazado, `2` error, `3` función desactivada (feature flag).
-`cmd` ∈ `consultar_alertas`, `recargar_saldo`, `pagar`, `pedir_ride`, `pedir_delivery`.
+`cmd` ∈ `consultar_alertas`, `preguntar_ia`, `recargar_saldo`, `pagar`, `pedir_ride`, `pedir_delivery`.
 
 ### 3.4 Identidad y llaves
 
@@ -398,6 +398,7 @@ servidor contra el esquema; **el texto de usuarios y contactos es dato no confia
 | `registrar_incidente` | `sender_id`, `incident_id`, `category`, `severity`, `lat`, `lon`, `accuracy_m`, `location_age_s`, `public_text`, `nota?` | `{incidente_ref, creado: bool}` |
 | `avisar_contactos` | `incident_id`, `canal: "sms"\|"email"\|"llamada_voz"`, `contactos: [índice]\|"todos"`, `mensaje` | `{enviados: [{indice, canal, estado}]}` |
 | `consultar_alertas` | `lat`, `lon`, `radio_m`, `desde?` | `{alertas: [{id, tipo, texto, distancia_m}]}` |
+| `preguntar_ia` | `q` (pregunta: ≤ 200 caracteres y ≤ 210 B UTF-8) | `CMD_RESULT` con la respuesta en texto plano (≤ 250 B) |
 | `recargar_saldo` (mock) | `sender_id`, `operador`, `monto`, `moneda` | `{estado, referencia_mock}` |
 | `pagar` (mock) | `sender_id`, `beneficiario`, `monto`, `moneda`, `concepto` | `{estado, referencia_mock}` |
 | `pedir_ride` (mock) | `sender_id`, `destino`, `modo` | `{estado, eta_min, referencia_mock}` |
@@ -412,6 +413,29 @@ Reglas:
   de la nota del SOS o de un contacto **nunca** invoca herramientas (defensa contra inyección).
 - Idempotencia por `(sender_id, ref)` y tope por usuario y por día.
 - La llamada con voz IA (`llamada_voz`) la hace el backend con el proveedor de voz elegido.
+
+### 7.1 `preguntar_ia`: consultar a una IA sin internet
+
+El usuario sin internet escribe una pregunta; viaja como un `CMD` (tipo 6) sellado al servidor, por el
+mismo camino que el resto (mesh → egress → `POST /v1/egress`), y la respuesta vuelve en **un solo**
+`CMD_RESULT` (tipo 7) sellado al usuario, por el buzón (R2) o el envío por radio (R5).
+
+- **Formato:** `{"cmd":"preguntar_ia","ref":<0..65535>,"args":{"q":"<pregunta>"}}`.
+- **Pregunta:** ≤ 200 caracteres **y** ≤ 210 B en UTF-8 (manda el límite en bytes con acentos o emoji).
+  Con `ref` = 65535 y 210 B de pregunta, el JSON mide 260 B ≤ 264 B (§2.1). Las comillas, barras y
+  caracteres de control se escapan al codificar el JSON y ocupan más: la app debe comprobar que el JSON
+  ya codificado quepa en 264 B (con Gson, usar `disableHtmlEscaping()` como en el registro).
+- **Respuesta:** texto plano ≤ 250 B UTF-8 (~230 caracteres), recortado por frase si el modelo se pasa.
+- **ACK:** código 2 («Recibido. Consultando a la IA») al aceptarla, sin esperar al modelo; el
+  `CMD_RESULT` llega después (el modelo tarda segundos; el regreso depende de cuándo consulte el egress).
+- **`status`:** `0` respuesta, `1` rechazada (pregunta vacía o larga, tope diario, servidor saturado),
+  `2` la IA falló o tardó más de 15 s (o el servidor se reinició a mitad), `3` función desactivada.
+- **Modelo:** `claude-haiku-5-5` por defecto (`ANTHROPIC_ASK_MODEL`). Sin herramientas: la pregunta es dato
+  no confiable y solo produce texto para quien la hizo. Recibe solo categoría y gravedad del incidente.
+- **Límites:** `FEATURE_ASK_AI` (apagada por defecto), 20 consultas por usuario y 24 h (cuentan las en curso),
+  4 simultáneas en el servidor. Idempotencia por `(sender_id, ref)`: un `ref` repetido no vuelve a consultar.
+- **Privacidad:** el servidor no guarda el texto de preguntas ni respuestas; solo metadatos (ref, estado,
+  latencia, modelo, tokens). La respuesta viaja sellada al usuario.
 
 ## 8. Ejemplos (datos sintéticos)
 

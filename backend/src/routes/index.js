@@ -8,7 +8,7 @@ import { usersRoutes } from './users.js';
 
 function healthHandler({ ctx, config }) {
   return ({ send }) => send(200, {
-    ok: true, server_sender_id: ctx.keys.senderId, features: { payments: config.featurePayments, rides: config.featureRides },
+    ok: true, server_sender_id: ctx.keys.senderId, features: { payments: config.featurePayments, rides: config.featureRides, ask_ai: config.ask.enabled },
   });
 }
 

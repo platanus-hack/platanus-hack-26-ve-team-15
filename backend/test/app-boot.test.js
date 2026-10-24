@@ -27,7 +27,7 @@ test('createApp arranca solo con variables de entorno: crea la base y las llaves
     assert.ok(existsSync(join(dir, 'keys', 'server-keys.json')), 'llaves generadas y guardadas');
     const health = await (await fetch(`${base}/health`)).json();
     assert.equal(health.server_sender_id, app.ctx.keys.senderId);
-    assert.deepEqual(health.features, { payments: false, rides: true });
+    assert.deepEqual(health.features, { payments: false, rides: true, ask_ai: false });
     assert.equal(app.ctx.channels.sms.live, false, 'sin credenciales los canales son simulados');
   } finally { stop(); }
 });

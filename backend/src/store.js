@@ -36,6 +36,10 @@ CREATE TABLE IF NOT EXISTS notifications (
 CREATE TABLE IF NOT EXISTS commands (
   sender_id TEXT NOT NULL, ref INTEGER NOT NULL, cmd TEXT NOT NULL, status INTEGER NOT NULL,
   result_text TEXT NOT NULL, amount REAL NOT NULL DEFAULT 0, at INTEGER NOT NULL, PRIMARY KEY (sender_id, ref));
+CREATE TABLE IF NOT EXISTS ask_jobs (
+  sender_id TEXT NOT NULL, ref INTEGER NOT NULL, incident_id TEXT NOT NULL, state TEXT NOT NULL,
+  status INTEGER, started_at INTEGER NOT NULL, finished_at INTEGER, ms INTEGER, model TEXT,
+  in_tokens INTEGER, out_tokens INTEGER, PRIMARY KEY (sender_id, ref));
 CREATE TABLE IF NOT EXISTS wa_inbound (phone TEXT PRIMARY KEY, at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS presence (
   egress_id TEXT PRIMARY KEY, cell TEXT NOT NULL, valid_until INTEGER NOT NULL);
@@ -252,6 +256,33 @@ export class Store {
     const r = this.db.prepare(`UPDATE notifications SET state = ? WHERE detail LIKE ? AND state IN ('sent', 'delivered', 'read')`)
       .run(state, `%:wamid:${wamid}`);
     return Number(r.changes);
+  }
+
+  // --- consultas a la IA (solo metadatos: nunca el texto de la pregunta ni de la respuesta) -----
+  getAskJob(senderId, ref) {
+    return this.db.prepare('SELECT * FROM ask_jobs WHERE sender_id = ? AND ref = ?').get(senderId, ref) ?? null;
+  }
+
+  startAskJob({ senderId, ref, incidentId, at }) {
+    this.db.prepare(`INSERT INTO ask_jobs (sender_id, ref, incident_id, state, started_at) VALUES (?,?,?,'pending',?)`)
+      .run(senderId, ref, incidentId, at);
+  }
+
+  finishAskJob({ senderId, ref, state, status, at, ms = null, model = null, inTokens = null, outTokens = null }) {
+    this.db.prepare(`UPDATE ask_jobs SET state = ?, status = ?, finished_at = ?, ms = ?, model = ?, in_tokens = ?, out_tokens = ?
+      WHERE sender_id = ? AND ref = ?`).run(state, status, at, ms, model, inTokens, outTokens, senderId, ref);
+  }
+
+  countAskSince(senderId, since) {
+    return this.db.prepare('SELECT COUNT(*) AS n FROM ask_jobs WHERE sender_id = ? AND started_at >= ?').get(senderId, since).n;
+  }
+
+  countPendingAsks() {
+    return this.db.prepare("SELECT COUNT(*) AS n FROM ask_jobs WHERE state = 'pending'").get().n;
+  }
+
+  listPendingAsks() {
+    return this.db.prepare("SELECT * FROM ask_jobs WHERE state = 'pending' ORDER BY started_at").all();
   }
 
   getCommand(senderId, ref) {
