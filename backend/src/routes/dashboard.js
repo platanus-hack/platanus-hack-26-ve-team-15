@@ -2,6 +2,7 @@
 import { CATEGORY_LABELS } from '../agent.js';
 import { HttpError } from '../http.js';
 import { intParam, requireDashboard, route } from './helpers.js';
+import { makeReplyToken, replyUrl } from '../tokens.js';
 
 function degrees(v) {
   return v === null ? null : v / 1e5;
@@ -35,10 +36,17 @@ function detailHandler({ ctx, config }) {
     requireDashboard(config, c);
     const i = ctx.store.getIncident(c.params.sender, c.params.incident);
     if (!i) throw new HttpError(404, 'incident not found');
+    const contacts = ctx.store.getContacts(i.sender_id).map(contactView);
+    const notifications = ctx.store.listNotifications(i.sender_id, i.incident_id).map((n) => ({
+      ...n,
+      reply_url: replyUrl(ctx, makeReplyToken(ctx, n.sender_id, n.incident_id, n.contact_idx)),
+    }));
+    const primaryReplyUrl = replyUrl(ctx, makeReplyToken(ctx, i.sender_id, i.incident_id, 0));
     c.send(200, {
       incident: incidentView({ ...i, display_name: ctx.store.getUser(i.sender_id)?.display_name }),
-      contacts: ctx.store.getContacts(i.sender_id).map(contactView),
-      notifications: ctx.store.listNotifications(i.sender_id, i.incident_id),
+      contacts,
+      notifications,
+      primary_reply_url: primaryReplyUrl,
       events: ctx.store.listEvents({ incidentId: i.incident_id }),
     });
   };

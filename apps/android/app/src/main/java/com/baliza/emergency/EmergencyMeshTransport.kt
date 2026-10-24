@@ -1,7 +1,6 @@
 package com.baliza.emergency
 
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.SharedFlow
 
 /**
  * Emergency-facing view of the mesh. The rest of Baliza Vital (SOS, egress, retries) talks to this
@@ -16,7 +15,7 @@ interface EmergencyMeshTransport {
      * Every emergency packet this node hears, including ones it only relays. Hot flow: collectors
      * that fall behind lose the oldest packets, never block the mesh.
      */
-    val incoming: SharedFlow<ReceivedEmergencyPacket>
+    val incoming: Flow<ReceivedEmergencyPacket>
 
     /**
      * Emits each time a new neighbor comes into range. The SOS sender restarts its retry schedule on
