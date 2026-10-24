@@ -75,3 +75,5 @@ tools/arti-build/target/
 # JVM heap dumps (a Gradle daemon OOM drops these in the repo root)
 *.hprof
 .gradle-docker-home/
+.android-docker-home/
+.robolectric-m2/
