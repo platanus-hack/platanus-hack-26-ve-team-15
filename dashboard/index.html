@@ -20,10 +20,29 @@
     </div>
     <div class="stats" id="stats" aria-live="polite"></div>
     <div class="top-actions">
+      <div class="mode-switch" role="group" aria-label="Modo de Operación">
+        <button type="button" class="mode-btn on" id="btn-mode-demo" data-mode="demo">🧪 Modo Demo</button>
+        <button type="button" class="mode-btn" id="btn-mode-real" data-mode="real">🔴 En Vivo Real</button>
+      </div>
       <span class="conn" id="conn" data-state="connecting"><i></i><span>Conectando…</span></span>
       <button class="btn ghost" id="btn-settings" type="button">Ajustes</button>
     </div>
   </header>
+
+  <div class="mode-banner demo-banner" id="mode-banner">
+    <div class="banner-content" id="banner-demo-view">
+      <span class="badge-mode demo">MODO DEMOSTRACIÓN</span>
+      <span class="banner-text">Simulaciones de telemetría y mesh para demostración a jurados sin despachar llamadas reales.</span>
+      <div class="banner-actions">
+        <button type="button" class="btn sm" id="btn-demo-mov">🚶 Simular Desplazamiento Chacao</button>
+        <button type="button" class="btn sm ghost" id="btn-demo-clear">🧹 Limpiar Datos Demo</button>
+      </div>
+    </div>
+    <div class="banner-content" id="banner-real-view" style="display: none;">
+      <span class="badge-mode real">🔴 CENTRO DE OPERACIONES EN VIVO</span>
+      <span class="banner-text">Monitoreando red física. Recibiendo paquetes de teléfonos Android conectados por Bluetooth/Mesh.</span>
+    </div>
+  </div>
 
   <main class="layout">
     <aside class="panel list-panel" aria-label="Incidentes">
@@ -63,12 +82,57 @@
       <label>Token de administración <small>(ADMIN_TOKEN, solo para las acciones de demo)</small>
         <input name="admin" type="password" autocomplete="off">
       </label>
+      <label>Capa de mapa base
+        <select name="mapProvider" id="sel-map-provider" style="width:100%;padding:8px 10px;border-radius:8px;background:var(--surface-2);color:var(--text);border:1px solid var(--border);">
+          <option value="esri">Esri Dark Canvas (Sin marca de agua · Gratis)</option>
+          <option value="carto">CARTO Dark Matter (Requiere API Key)</option>
+          <option value="osm">OpenStreetMap Estándar (Sin clave)</option>
+        </select>
+      </label>
+      <label id="grp-carto-key">API Key de CARTO <small>(Opcional, de carto.com/basemaps/apikey)</small>
+        <input name="cartoKey" type="text" placeholder="Ej: default_api_key o tu clave" autocomplete="off">
+      </label>
       <p class="hint">Se guardan solo en este navegador.</p>
       <div class="row">
         <button class="btn ghost" value="cancel" type="submit">Cancelar</button>
         <button class="btn primary" value="save" type="submit">Guardar y reconectar</button>
       </div>
-    </form>
+  </dialog>
+
+  <dialog id="dlg-qr">
+    <div class="qr-modal">
+      <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+        <h2 style="font-size:15px; margin:0;">📱 Interacción con el Jurado</h2>
+        <button class="btn ghost" id="btn-close-qr-top" type="button" style="padding:2px 8px; font-size:14px; min-width:auto;">✕</button>
+      </div>
+
+      <div class="qr-tabs" style="display:flex; gap:6px; width:100%; margin-top:4px;">
+        <button class="btn primary" id="tab-qr" type="button" style="flex:1; font-size:11px; padding:6px 4px;">Opción 1: Escanear QR</button>
+        <button class="btn ghost" id="tab-wa" type="button" style="flex:1; font-size:11px; padding:6px 4px;">Opción 2: WhatsApp</button>
+      </div>
+
+      <div id="view-tab-qr" style="display:flex; flex-direction:column; align-items:center; gap:10px; width:100%;">
+        <p class="qr-subtitle">Cualquier persona del jurado puede escanear con la cámara de su teléfono para responder directamente al SOS offline:</p>
+        <div class="qr-box">
+          <img id="qr-img" src="" alt="Código QR de respuesta de emergencia" width="200" height="200">
+        </div>
+        <a id="qr-link" href="#" target="_blank" rel="noopener" class="qr-url"></a>
+      </div>
+
+      <div id="view-tab-wa" style="display:none; flex-direction:column; gap:8px; width:100%; text-align:left; background:var(--surface-2); padding:12px; border-radius:10px; font-size:12px; border:1px solid var(--border);">
+        <b style="color:var(--text);">📲 Alerta en Vivo por WhatsApp:</b>
+        <p style="margin:0; color:var(--muted); line-height:1.4;">
+          El teléfono del equipo (<strong>+58 412-3098258</strong>) tiene la sesión sandbox de Meta activa por 24 horas y recibe las alertas reales generadas por IA al instante.
+        </p>
+        <div style="background:var(--surface); padding:8px 10px; border-radius:6px; border:1px solid var(--border); font-size:11px; color:var(--accent); line-height:1.4;">
+          💡 <em>En producción con Meta Business API verificado, Baliza Vital notifica a cualquier número del planeta sin registro ni códigos.</em>
+        </div>
+      </div>
+
+      <div class="qr-actions">
+        <button class="btn primary" id="btn-close-qr" type="button" style="width:100%;">Cerrar</button>
+      </div>
+    </div>
   </dialog>
 
   <div class="toasts" id="toasts" aria-live="polite"></div>
