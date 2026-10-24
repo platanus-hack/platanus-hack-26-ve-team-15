@@ -12,10 +12,10 @@ Los ejemplos se regeneran con `node docs/examples/generate-examples.mjs` y queda
 
 | ID | Decisión | Estado |
 |----|----------|--------|
-| D-1 | **Tipo portador**: el paquete viaja como `MessageType.EMERGENCY = 0x30` (aditivo), broadcast sin `recipientID`. Ver §2. | **Cerrada** |
+| D-1 | **Tipo portador**: el paquete viaja como `MessageType.EMERGENCY = 0x30` (aditivo), broadcast con `recipientID = BROADCAST` (8 × `0xFF`, como `FILE_TRANSFER`), sobre v1. Ver §2. | **Cerrada** |
 | D-2 | **Sin topología forzada**: el mesh no se limita a una cadena; no hay modo "Topología Demo". Lo que importa es que el ACK llegue al origen (§5.1). | **Cerrada** |
 
-Pendiente de confirmar en dispositivos: que un nodo intermedio reenvíe un `EMERGENCY` (§2).
+Pendiente de confirmar en dispositivos: que el paquete cruce un salto BLE real (A–B–C). La parte de software (firma del sobre, despacho y relevo) ya está verificada en código y en pruebas (§2).
 
 ## 1. Alcance y principios
 
@@ -41,7 +41,9 @@ Nuestro paquete (el "paquete interno") es el `payload` de un `BitchatPacket` de 
 | Fragmentación | `FragmentManager.createFragments` fragmenta si el frame **sin relleno** mide **> 512 B** | Presupuesto: sobre ≤ 512 B |
 | Relleno | `BLEPacketPaddingPolicy` solo rellena tipos Noise | No afecta a nuestro tipo |
 | Compresión | Se intenta si el payload ≥ 100 B y la entropía lo permite; solo se usa si el resultado es más pequeño, y añade un campo de 2 B | Peor caso +1 B; se deja margen de 6 B |
-| Tipo desconocido | Por lectura de `PacketProcessor`: un tipo no reconocido sin `recipientID` no se trata como destinado al nodo y **sigue al relevo** | Todos los teléfonos corren nuestra app, así que todos conocen `EMERGENCY`. Lo que **hay que confirmar en dispositivos** es que un nodo intermedio lo reenvíe: `SecurityManager` verifica la firma del sobre con la llave que aprendió del `ANNOUNCE` del emisor, y un intermedio que no la conozca podría descartarlo |
+| Firma del sobre en `EMERGENCY` | `SecurityManager.verifyPacketSignature` solo exige la llave del emisor (aprendida del `ANNOUNCE`) para ANNOUNCE, MESSAGE, FILE_TRANSFER, VOICE_FRAME y LEAVE; el resto devuelve `true` | Un nodo intermedio **no necesita conocer al emisor** para reenviar un `EMERGENCY`. A cambio, el sobre no autentica: la autenticidad es solo la firma Ed25519 **interna**, que verifica el backend. Un nodo puede inyectar tráfico `EMERGENCY` falso que se reenvía hasta el TTL; el backend lo descarta (401) y aplica límite de tasa |
+| Despacho y relevo | `EMERGENCY` va en la rama pública de `PacketProcessor`; el relevo común lo reenvía con TTL − 1. Probado en `EmergencyPacketTest` (con sumidero, sin él y con sumidero que falla) | Todos los nodos, también los que solo retransmiten, ven el paquete |
+| Ruta y destinatario | `applyRouteIfAvailable` solo agrega ruta v2 si el destinatario no es nulo ni BROADCAST | Con `recipientID = BROADCAST` el sobre sigue en v1 y el presupuesto de 418 B es válido |
 | TTL | El relevo exige `ttl ≥ 4` o red pequeña/probabilidad (`PacketRelayManager`); TTL por defecto 7 | Se emite con el TTL por defecto (7). Sin topología forzada (ver §3.2) |
 
 **D-1 (cerrada):** añadir `MessageType.EMERGENCY = 0x30` (cambio aditivo en el enum y una rama
@@ -240,8 +242,9 @@ Los nodos intermedios (B) no guardan paquetes de otros; esa "custodia" queda fue
 - Intervalo: cada 15 s durante los primeros 2 min; después cada 60 s. Tope: 30 min sin ACK, y
   vuelve a empezar al detectar un vecino nuevo.
 - El paquete interno se reenvía **idéntico** (mismo `seq`, misma firma). El sobre de bitchat sí debe
-  ser nuevo en cada intento para que su filtro de duplicados no lo descarte (a verificar en
-  `PacketIdUtil`, Fase 2).
+  ser nuevo en cada intento. Verificado: el ID de duplicado es `SHA-256(tipo | sender | timestamp en ms
+  del sobre | payload)` (`PacketIdUtil`), así que basta con un `timestamp` distinto; dos envíos en el
+  mismo milisegundo colisionarían.
 - El backend responde `duplicate` con el mismo ACK (§4). Cada reenvío que alcance a un egress
   reabre el camino de regreso, aunque el egress anterior ya no esté.
 - Si el ACK confirma un `seq` menor al último enviado, se siguen reenviando los pendientes.
@@ -640,8 +643,8 @@ AQcHCmgnn7Sb3hIAAgAAgAAAAIAAAAAAAAAAay5bl3491E8KmLZmAABXipsXfwr52NBd2Ow2daFqmQ72
 
 ## 9. Pendiente de este contrato
 
-- Confirmar en dispositivos que un nodo intermedio reenvía un `EMERGENCY` (D-1): prueba A–B–C con B en medio.
-- Confirmar en `PacketIdUtil` que un sobre nuevo con el mismo payload no cae en el filtro de duplicados (R1).
+- Confirmar en dispositivos que un `EMERGENCY` cruza un salto BLE real (D-1): prueba A–B–C con B en medio.
+- Limitar el reenvío de `EMERGENCY` no autenticado por el sobre (tasa por emisor) si se observa abuso.
 - Fuera del alcance del demo: custodia de paquetes ajenos en nodos intermedios.
 - Implementar `docs/examples/examples.json` como prueba de conformidad en Kotlin y en el backend.
 - Medir en dispositivos: pérdida de paquetes, latencia por salto y comportamiento del relevo con TTL 3.
