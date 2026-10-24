@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildChannels, templateParams } from '../src/channels.js';
 import { loadConfig } from '../src/config.js';
-import { createMessageWriter } from '../src/llm.js';
+import { buildClient, createMessageWriter } from '../src/llm.js';
 import { Store } from '../src/store.js';
 
 const KAPSO_ENV = { KAPSO_API_KEY: 'kapso-key-SECRET', KAPSO_PHONE_NUMBER_ID: '123456789', KAPSO_TEMPLATE_ALERT: 'baliza_alerta', KAPSO_TEMPLATE_MESSAGE: 'baliza_mensaje' };
@@ -210,4 +210,13 @@ test('Kapso: el texto no pide vista previa de enlaces; el idioma de la plantilla
   store.touchWaInbound('580000000001', NOW - 60);
   await ch.sms.send(msg);
   assert.equal(JSON.parse(calls[0].body).text.preview_url, false);
+});
+
+test('cliente de Anthropic: sin clave no hay cliente; ANTHROPIC_BASE_URL apunta a un proxy', () => {
+  assert.equal(buildClient(loadConfig({}).llm), null);
+  const direct = buildClient(loadConfig({ ANTHROPIC_API_KEY: 'k' }).llm);
+  assert.equal(direct.baseURL, 'https://api.anthropic.com');
+  const proxied = buildClient(loadConfig({ ANTHROPIC_API_KEY: 'k', ANTHROPIC_BASE_URL: 'https://proxy.example/v1' }).llm);
+  assert.equal(proxied.baseURL, 'https://proxy.example/v1');
+  assert.equal(loadConfig({ ANTHROPIC_BASE_URL: '' }).llm.baseUrl, null);
 });

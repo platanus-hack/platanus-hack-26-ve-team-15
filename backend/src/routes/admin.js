@@ -49,8 +49,10 @@ function clearDemoHandler({ ctx, config }) {
   };
 }
 
-function runSimulationHandler({ ctx }) {
+/** Lanza un proceso que simula un SOS en movimiento: siempre exige ADMIN_TOKEN (404 si no está configurado). */
+function runSimulationHandler({ ctx, config }) {
   return async (c) => {
+    requireAdmin(config, c);
     const { spawn } = await import('node:child_process');
     const { fileURLToPath } = await import('node:url');
     const script = fileURLToPath(new URL('../../scripts/simulate-movement.mjs', import.meta.url));

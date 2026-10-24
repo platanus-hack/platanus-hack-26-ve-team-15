@@ -507,8 +507,7 @@ $('btn-mode-demo')?.addEventListener('click', () => setMode('demo'));
 $('btn-mode-real')?.addEventListener('click', () => setMode('real'));
 
 $('btn-demo-mov')?.addEventListener('click', async () => {
-  toast('Iniciando simulación de desplazamiento en Chacao...', 'var(--accent)');
-  await fetch(`${cfg.api}/v1/dev/run-simulation`, { method: 'POST' }).catch(() => {});
+  await adminPost('/v1/dev/run-simulation', {}, 'Simulación de desplazamiento en Chacao iniciada');
 });
 
 $('btn-demo-clear')?.addEventListener('click', async () => {

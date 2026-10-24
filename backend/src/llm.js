@@ -26,15 +26,23 @@ export function buildPrompt({ incident, contact, mapUrl, replyUrl, note, lang })
  * `writer(promptXml, fallbackText) -> Promise<string>`. Sin API key o ante cualquier error devuelve la
  * plantilla determinista, que es el camino probado; el LLM solo mejora la redacción.
  */
+/** Cliente de Anthropic: `baseUrl` permite un proxy; sin API key no hay cliente y se usa la plantilla. */
+export function buildClient(llm) {
+  if (!llm.apiKey) return null;
+  const options = { apiKey: llm.apiKey, timeout: llm.timeoutMs, maxRetries: 0 };
+  return new Anthropic(llm.baseUrl ? { ...options, baseURL: llm.baseUrl } : options);
+}
+
+function replyText(res) {
+  return res.content.filter((b) => b.type === 'text').map((b) => b.text).join('').trim();
+}
+
+function isUsable(text) {
+  return text.length >= 10 && text.length <= 600;
+}
+
 export function createMessageWriter(config, { client } = {}) {
-  const apiClient = client ?? (config.llm.apiKey
-    ? new Anthropic({
-      apiKey: config.llm.apiKey,
-      ...(config.llm.baseUrl ? { baseURL: config.llm.baseUrl } : {}),
-      timeout: config.llm.timeoutMs,
-      maxRetries: 0,
-    })
-    : null);
+  const apiClient = client ?? buildClient(config.llm);
   if (!apiClient) return async (_prompt, fallback) => fallback;
   return async (prompt, fallback) => {
     try {
@@ -45,8 +53,8 @@ export function createMessageWriter(config, { client } = {}) {
         output_config: { effort: 'low' },
         messages: [{ role: 'user', content: prompt }],
       });
-      const text = res.content.filter((b) => b.type === 'text').map((b) => b.text).join('').trim();
-      return text.length >= 10 && text.length <= 600 ? text : fallback;
+      const text = replyText(res);
+      return isUsable(text) ? text : fallback;
     } catch {
       return fallback;
     }

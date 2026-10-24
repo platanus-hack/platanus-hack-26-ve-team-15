@@ -442,3 +442,19 @@ test('registro: el índice de contacto debe ser entero entre 0 y 31', async () =
     assert.equal((await withIndex(31)).status, 201);
   } finally { app.close(); }
 });
+
+test('endpoints de demo: la simulación (que lanza un proceso) siempre exige ADMIN_TOKEN; el resto lo exige si está configurado', async () => {
+  const { app } = await setup();
+  try {
+    const auth = { authorization: 'Bearer admin-secret' };
+    for (const path of ['/v1/dev/run-simulation', '/v1/admin/clear-demo', '/v1/dev/dispatch-ride']) {
+      assert.equal((await app.call('POST', path, {})).status, 401, `${path} sin token`);
+      assert.equal((await app.call('POST', path, {}, { authorization: 'Bearer otro' })).status, 401, `${path} con token ajeno`);
+    }
+    assert.equal((await app.call('POST', '/v1/admin/clear-demo', {}, auth)).status, 200);
+  } finally { app.close(); }
+  const open = await startApp({ env: { ADMIN_TOKEN: '' } });
+  try {
+    assert.equal((await open.call('POST', '/v1/dev/run-simulation', {})).status, 404, 'sin ADMIN_TOKEN la ruta no existe');
+  } finally { open.close(); }
+});
