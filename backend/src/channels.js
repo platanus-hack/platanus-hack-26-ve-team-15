@@ -35,6 +35,7 @@ function consoleChannel(name, log) {
 function twilioSms(cfg, fetchImpl) {
   return {
     name: 'sms',
+    provider: 'twilio',
     live: true,
     async send({ to, text }) {
       const auth = Buffer.from(`${cfg.sid}:${cfg.token}`).toString('base64');
@@ -117,12 +118,13 @@ async function sendWhatsApp(wa, { to, text, kind = 'alert', fields = {}, lang })
  */
 export function kapsoWhatsApp(cfg, fetchImpl, { store, now }) {
   const wa = { cfg, fetchImpl, store, now, url: `${cfg.baseUrl}/${cfg.phoneNumberId}/messages`, headers: { 'x-api-key': cfg.apiKey } };
-  return { name: 'sms', live: true, send: (message) => sendWhatsApp(wa, message) };
+  return { name: 'sms', provider: 'kapso', live: true, send: (message) => sendWhatsApp(wa, message) };
 }
 
 function resendEmail(cfg, fetchImpl) {
   return {
     name: 'email',
+    provider: 'resend',
     live: true,
     async send({ to, subject, text }) {
       try {
@@ -140,6 +142,7 @@ function resendEmail(cfg, fetchImpl) {
 function elevenLabsVoice(cfg, fetchImpl) {
   return {
     name: 'voice',
+    provider: 'elevenlabs',
     live: true,
     async send({ to, text, lang, contactName, incident }) {
       try {
@@ -180,6 +183,12 @@ function emailChannel({ email }, { fetchImpl, log }) {
 
 function voiceChannel({ voice }, { fetchImpl, log }) {
   return voice.apiKey && voice.agentId && voice.phoneNumberId ? elevenLabsVoice(voice, fetchImpl) : consoleChannel('voice', log);
+}
+
+/** Nombre del proveedor de un canal ('kapso', 'twilio', 'resend', 'elevenlabs') o 'simulated'. */
+export function providerOf(channel) {
+  if (!channel?.live) return 'simulated';
+  return channel.provider ?? channel.name;
 }
 
 export function buildChannels(config, { fetchImpl = fetch, log = console.log, store, now = () => Math.floor(Date.now() / 1000) } = {}) {

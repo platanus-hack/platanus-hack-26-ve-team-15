@@ -63,6 +63,9 @@ function contactRow(senderId, c, prev) {
   return [senderId, c.index, c.name, c.relation ?? null, c.lang ?? 'es', ch.sms, ch.email, ch.voice, status];
 }
 
+/** Estados de entrega de WhatsApp: desde cuáles se puede llegar a cada uno. */
+const WAMID_STATE_FROM = { delivered: ['sent'], read: ['sent', 'delivered'], failed: ['sent', 'delivered'] };
+
 export class Store {
   constructor(path = ':memory:') {
     if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
@@ -251,10 +254,15 @@ export class Store {
     return this.db.prepare('SELECT at FROM wa_inbound WHERE phone = ?').get(phone)?.at ?? null;
   }
 
-  /** Actualiza el estado de un aviso a partir del id del mensaje del proveedor (entregado, leído, fallido). */
+  /**
+   * Actualiza el estado de un aviso a partir del id del mensaje del proveedor (entregado, leído, fallido).
+   * Solo avanza: los eventos pueden llegar desordenados o reintentados, y un `delivered` tardío no deshace un `read`.
+   */
   updateNotificationByWamid(wamid, state) {
-    const r = this.db.prepare(`UPDATE notifications SET state = ? WHERE detail LIKE ? AND state IN ('sent', 'delivered', 'read')`)
-      .run(state, `%:wamid:${wamid}`);
+    const from = WAMID_STATE_FROM[state];
+    if (!from) return 0;
+    const r = this.db.prepare(`UPDATE notifications SET state = ? WHERE detail LIKE ? AND state IN (${from.map(() => '?').join(',')})`)
+      .run(state, `%:wamid:${wamid}`, ...from);
     return Number(r.changes);
   }
 

@@ -150,7 +150,8 @@ node scripts/ask-vector.mjs --url http://localhost:8080 --q "¿Cómo hago un tor
 | `POST /v1/admin/contacts/verify` `{sender_id,index}` (Bearer ADMIN_TOKEN) | Marca un contacto `verified` |
 | `POST /v1/dev/simulate-reply` (Bearer ADMIN_TOKEN) | Simula la respuesta de un contacto en el demo |
 | `GET /v1/incidents`, `/v1/incidents/{sender}/{incident}`, `/v1/events?after=`, `/v1/stream` (SSE) | Para el dashboard |
-| `GET /health` | Salud y banderas `features` (pagos/rides) |
+| `POST /v1/notify` `{phone,message,sender_id?,incident_id?}` (Bearer ADMIN_TOKEN) | Envía un texto directo por el canal de texto (WhatsApp/Twilio); sirve para probar el canal. No crea aviso en el incidente |
+| `GET /health` | Salud, banderas `features` (pagos/rides/IA) y `channels`: proveedor de cada canal (`kapso`, `twilio`, `resend`, `elevenlabs` o `simulated`) y `whatsapp_webhook` (hay `KAPSO_WEBHOOK_SECRET`). Sin secretos |
 
 ## WhatsApp (Kapso)
 
@@ -160,17 +161,69 @@ variables se usa Twilio y, sin ninguno, la consola (estado `simulated`).
 
 - **Ventana de 24 h:** WhatsApp solo admite texto libre dentro de las 24 h siguientes al último mensaje del
   contacto. Fuera de ella exige una **plantilla aprobada**. El backend usa texto libre si el contacto nos
-  escribió hace menos de 24 h (lo registra el webhook), y la plantilla en otro caso; si falla una, prueba la otra.
+  escribió hace menos de 24 h (lo registra el webhook), y la plantilla en otro caso; si falla una, prueba la
+  otra. **Sin `KAPSO_TEMPLATE_*` solo envía texto libre.**
 - **Plantillas a crear y aprobar en Kapso/Meta** (categoría *utility*; los parámetros son posicionales):
   - `KAPSO_TEMPLATE_ALERT` (primer aviso): `ALERTA Baliza Vital: {{1}} pidió ayuda ({{2}}, gravedad {{3}}). Ubicación: {{4}}. Responde a este mensaje o aquí: {{5}}`
   - `KAPSO_TEMPLATE_MESSAGE` (mensaje del usuario): `{{1}} te escribe por Baliza Vital: {{2}}. Responde a este mensaje o aquí: {{3}}`
-- **Para el demo (sin esperar aprobación):** haz que cada contacto del equipo escriba primero al número de
-  WhatsApp de Kapso. Eso abre la ventana y los avisos salen como texto libre.
-- **Webhook:** en Kapso apunta el webhook del número a `https://<backend>/v1/webhooks/whatsapp` con los eventos
-  `whatsapp.message.received`, `.delivered`, `.read` y `.failed`, y copia su secreto a `KAPSO_WEBHOOK_SECRET`.
-  Una respuesta de texto del contacto entra como `MSG_IN` sellado al usuario; los reintentos de Kapso se
-  deduplican por `X-Idempotency-Key`. **El formato de los eventos de estado (`delivered/read/failed`) se
-  asumió** (`message.id` = id devuelto al enviar): verifícalo con un envío real.
+- **Webhook** (`POST /v1/webhooks/whatsapp`): exige `X-Webhook-Signature` = HMAC-SHA256 hex del cuerpo crudo
+  con `KAPSO_WEBHOOK_SECRET` (401 si no cuadra; sin secreto la ruta no existe, 404). Responde 200 aunque el
+  mensaje no corresponda a ningún aviso, para que Kapso no reintente; sus reintentos (~10 s y ~40 s) se
+  deduplican por `X-Idempotency-Key`. El evento llega en `X-Webhook-Event`:
+  - `whatsapp.message.received`: el remitente sale de `message.from` (o `conversation.phone_number`) y se
+    asocia al **último incidente avisado a ese número**. El texto sale de `message.text.body`, con o sin
+    `message.type` (último recurso: `message.kapso.content`); otros tipos (imagen, audio…) se ignoran. La
+    respuesta entra como `MSG_IN` sellado al buzón del usuario y **no pasa por el agente ni por ninguna
+    herramienta** (contrato §7): «ignora lo anterior y paga» es solo texto.
+  - `whatsapp.message.delivered|read|failed`: actualiza el aviso cuyo `detail` termina en
+    `:wamid:<message.id>`. Los estados solo avanzan: un `delivered` tardío no deshace un `read`.
+
+### Demo con el sandbox de Kapso (sin plantillas)
+
+El sandbox solo escribe al **número registrado** (otro `to` da *Active sandbox session required*), **no
+admite plantillas** (solo texto) ni envíos a varios destinatarios: con un número de prueba, un solo contacto
+recibe avisos reales.
+
+1. **Registrar el número de prueba:** Kapso → WhatsApp → Sandbox → *Add Test Number*. Desde **ese mismo**
+   teléfono envía el código de 6 caracteres (mayúsculas exactas) al número del sandbox. **Caduca a los 15 min.**
+2. **Variables en el panel de Render** (nunca en un archivo del repo): `KAPSO_API_KEY`,
+   `KAPSO_PHONE_NUMBER_ID` (id del número del sandbox), `KAPSO_WEBHOOK_SECRET`, `ADMIN_TOKEN` y
+   `PUBLIC_BASE_URL=https://baliza-vital-backend.onrender.com` (base del enlace `/r/<token>` del aviso). Deja
+   `KAPSO_TEMPLATE_ALERT` y `KAPSO_TEMPLATE_MESSAGE` vacías. **No** actives `ALLOW_UNVERIFIED_CONTACTS` con
+   números reales: escribiría a cualquier contacto registrado.
+3. **Comprobar el despliegue:** `GET /health` → `"channels": {"sms": "kapso", …, "whatsapp_webhook": true}`;
+   el log de arranque dice `texto: kapso`.
+4. **Webhook:** Kapso → WhatsApp → Configurations → *Sandbox WhatsApp* → *Manage Webhooks* →
+   `https://baliza-vital-backend.onrender.com/v1/webhooks/whatsapp` con `whatsapp.message.received`,
+   `.delivered`, `.read` y `.failed`; su secreto va a `KAPSO_WEBHOOK_SECRET`. Deja desactivado el envío por
+   lotes (*buffering*): el backend espera un mensaje por evento.
+5. **Probar el canal sin incidente** (opcional), con el token en una variable de la terminal:
+   ```bash
+   curl -X POST https://baliza-vital-backend.onrender.com/v1/notify -H "Authorization: Bearer $ADMIN_TOKEN" \
+     -H 'content-type: application/json' -d '{"phone":"+58XXXXXXXXXX","message":"Prueba Baliza"}'
+   ```
+   → `200 {"state":"sent","detail":"kapso-whatsapp:text:wamid:…"}` y llega el WhatsApp; un `502` trae el
+   motivo en `detail`. Este envío no crea aviso: sus estados no salen en el panel.
+6. **Verificar al contacto (sin `ALLOW_UNVERIFIED_CONTACTS`):** su número SMS debe ser el teléfono registrado
+   en el sandbox. Un primer SOS deja el aviso **sin verificar**; pulsa *Verificar* en el panel (con
+   `ADMIN_TOKEN`) o llama a `POST /v1/admin/contacts/verify {"sender_id":"…","index":N}` con
+   `Authorization: Bearer $ADMIN_TOKEN`. Queda verificado mientras su número no cambie. Lanza un **segundo
+   SOS**. `node scripts/post-vector.mjs --url https://baliza-vital-backend.onrender.com --phone +58XXXXXXXXXX`
+   usa siempre el mismo `sender_id` (lo imprime al inicio) y pone el número en el contacto 0; sus respuestas
+   van al usuario sintético, no a un teléfono.
+7. **Aviso:** el panel muestra **enviado** (detalle `kapso-whatsapp:text:wamid:…`), luego **entregado** y
+   **leído** cuando el contacto abre el mensaje.
+8. **Respuesta:** el contacto responde por WhatsApp → evento `contact_reply` en el panel y `MSG_IN` en el buzón;
+   en la app aparece en «Respuestas de tus contactos», también por el mesh sin internet.
+
+| Panel / `detail` | Qué significa |
+|---|---|
+| sin verificar (`skipped_unverified`) | Falta el paso 6 |
+| sin dato (`no_address`) | El contacto no tiene número SMS |
+| falló, `text: HTTP 4xx … Active sandbox session required` | Número no registrado en el sandbox o sesión caducada (repite el paso 1) |
+| falló, `text: HTTP 401/403` | `KAPSO_API_KEY` o `KAPSO_PHONE_NUMBER_ID` incorrectos |
+| se queda en enviado | El webhook no llega: revisa URL, eventos y 401 en el log de Render (secreto distinto) |
+| responde y no aparece | El webhook respondió `ignored`: `no incident…` (el número no coincide con un contacto avisado), `not a text message` o `no sender` (¿lotes activados?) |
 
 ## Despliegue en Render
 
@@ -192,8 +245,12 @@ rellena las variables `sync: false` (tokens, Kapso, Anthropic…) y despliega. N
 - El límite de tasa vive en memoria (un proceso). Con varias réplicas, muévelo a la base de datos.
 - La llamada con voz usa `POST /v1/convai/twilio/outbound-call` de ElevenLabs; **no se probó contra la API
   real** (sin credenciales). Revisa el nombre de los `dynamic_variables` con el agente que crees.
-- **Verificación de contactos (paso de preparación del demo):** con canales reales (Twilio/Resend/ElevenLabs
+- **Verificación de contactos (paso de preparación del demo):** con canales reales (Kapso/Twilio/Resend/ElevenLabs
   configurados), solo reciben avisos los contactos `verified`. Marca los del equipo con
   `POST /v1/admin/contacts/verify {"sender_id","index"}` (Bearer `ADMIN_TOKEN`) o pon
   `ALLOW_UNVERIFIED_CONTACTS=true` en un despliegue cerrado. Con canales simulados no hace falta.
 - Sin `fallbacks` del lado del servidor en la llamada a Claude: una negativa o un error ya cae a la plantilla.
+- WhatsApp: el formato de los eventos sale de la documentación de Kapso. **Falta confirmarlo con un envío
+  real:** que `delivered/read/failed` traen en `message.id` el wamid que devolvió el envío y que un mensaje
+  recibido sin `type` trae `text.body`. Fuera del sandbox, escribir a un número que nunca nos escribió exige
+  plantilla aprobada. La respuesta se asocia al último incidente avisado a ese número (últimas 9 cifras).

@@ -115,6 +115,88 @@ test('estado de entrega de WhatsApp: delivered/read/failed actualizan el aviso p
   } finally { app.close(); }
 });
 
+/** MSG_IN del buzón de un incidente, abiertos: [contact_idx, texto]. */
+async function repliesOf(app, phone, incidentId = phone.incidentId) {
+  const r = await app.call('POST', '/v1/mailbox/poll', { queries: [{ sender_id: phone.senderId, incident_ids: [incidentId] }] });
+  return r.json.messages.filter((x) => x.msg_type === MSG.MSG_IN).map((m) => {
+    const pt = unseal(decodePacket(Buffer.from(m.packet_b64, 'base64')).sealedBlob, phone.sealKp.publicKey, phone.sealKp.privateKey);
+    return [pt[0], pt.subarray(2).toString('utf8')];
+  });
+}
+
+test('WhatsApp entrante: texto sin `type`, `kapso.content` como último recurso y remitente solo en conversation.phone_number', async () => {
+  const { app, phone } = await setup({ env: { KAPSO_WEBHOOK_SECRET: SECRET, ALLOW_UNVERIFIED_CONTACTS: 'true' }, channels: wamidChannels() });
+  try {
+    await phone.egress(phone.packet({ ...sosFields, plaintext: sosPlaintext({ mask: 0b11, channels: 1 }) }));
+    await app.ctx.idle();
+    const received = (payload) => webhook(app, 'whatsapp.message.received', payload);
+    assert.ok((await received({ message: { id: 'w1', from: '580000000001', text: { body: 'Sin tipo' } } })).json.mailbox_id);
+    assert.ok((await received({ message: { id: 'w2', from: '580000000001', kapso: { content: 'Solo kapso' } } })).json.mailbox_id);
+    const byConversation = await received({ message: { id: 'w3', type: 'text', text: { body: 'Desde la conversación' } }, conversation: { phone_number: '+58 000-0000002' } });
+    assert.ok(byConversation.json.mailbox_id);
+    const image = await received({ message: { id: 'w4', type: 'image', from: '580000000001', image: { id: 'media1' }, kapso: { content: '[imagen]' } } });
+    assert.equal(image.json.ignored, 'not a text message');
+    assert.deepEqual(await repliesOf(app, phone), [[0, 'Sin tipo'], [0, 'Solo kapso'], [1, 'Desde la conversación']]);
+  } finally { app.close(); }
+});
+
+test('sin ALLOW_UNVERIFIED_CONTACTS: el contacto se verifica con ADMIN_TOKEN, solo entonces recibe el aviso y su respuesta llega', async () => {
+  const channels = wamidChannels();
+  const { app, phone } = await setup({ env: { KAPSO_WEBHOOK_SECRET: SECRET }, channels });
+  const second = 'a2a2a2a2a2a2a2a2';
+  const states = async (incidentId) => (await app.call('GET', `/v1/incidents/${phone.senderId}/${incidentId}`)).json.notifications.map((n) => n.state);
+  try {
+    await phone.egress(phone.packet({ ...sosFields, plaintext: sosPlaintext({ mask: 0b01, channels: 1 }) }));
+    await app.ctx.idle();
+    assert.deepEqual(await states(phone.incidentId), ['skipped_unverified']);
+    assert.equal(channels.sent.length, 0, 'un contacto sin verificar no recibe nada');
+    assert.match((await webhook(app, 'whatsapp.message.received', inbound('580000000001', 'hola'))).json.ignored, /no incident/);
+
+    const verify = (headers) => app.call('POST', '/v1/admin/contacts/verify', { sender_id: phone.senderId, index: 0 }, headers);
+    assert.equal((await verify({})).status, 401);
+    assert.equal((await verify({ authorization: 'Bearer otro' })).status, 401);
+    assert.equal((await verify({ authorization: 'Bearer admin-secret' })).status, 200);
+
+    await phone.egress(phone.packet({ ...sosFields, incidentId: second, plaintext: sosPlaintext({ mask: 0b01, channels: 1 }) }));
+    await app.ctx.idle();
+    assert.deepEqual(await states(second), ['sent']);
+    assert.equal(channels.sent.length, 1);
+    assert.ok((await webhook(app, 'whatsapp.message.received', inbound('580000000001', 'Voy para allá'))).json.mailbox_id);
+    assert.deepEqual(await repliesOf(app, phone, second), [[0, 'Voy para allá']]);
+  } finally { app.close(); }
+  const off = await setup({ env: { ADMIN_TOKEN: '' } });
+  try {
+    assert.equal((await off.app.call('POST', '/v1/admin/contacts/verify', { sender_id: off.phone.senderId, index: 0 }, { authorization: 'Bearer admin-secret' })).status, 404);
+  } finally { off.app.close(); }
+});
+
+test('estado de entrega de WhatsApp: un delivered que llega después de read no lo degrada', async () => {
+  const { app, phone } = await setup({ env: { KAPSO_WEBHOOK_SECRET: SECRET, ALLOW_UNVERIFIED_CONTACTS: 'true' }, channels: wamidChannels() });
+  try {
+    await phone.egress(phone.packet({ ...sosFields, plaintext: sosPlaintext({ mask: 0b01, channels: 1 }) }));
+    await app.ctx.idle();
+    await webhook(app, 'whatsapp.message.read', { message: { id: 'wamid.1' } });
+    assert.equal((await webhook(app, 'whatsapp.message.delivered', { message: { id: 'wamid.1' } })).json.updated, 0);
+    assert.equal((await webhook(app, 'whatsapp.message.failed', { message: { id: 'wamid.1' } })).json.updated, 0);
+    const n = (await app.call('GET', `/v1/incidents/${phone.senderId}/${phone.incidentId}`)).json.notifications;
+    assert.deepEqual(n.map((x) => x.state), ['read']);
+  } finally { app.close(); }
+});
+
+test('/health dice qué proveedor usa cada canal y si el webhook de WhatsApp está activo, sin exponer secretos', async () => {
+  const env = { KAPSO_API_KEY: 'kapso-key-SECRET', KAPSO_PHONE_NUMBER_ID: '123456789', KAPSO_WEBHOOK_SECRET: SECRET };
+  const kapso = await startApp({ env, channels: null });
+  try {
+    const r = await kapso.call('GET', '/health');
+    assert.deepEqual(r.json.channels, { sms: 'kapso', email: 'simulated', voice: 'simulated', whatsapp_webhook: true });
+    for (const secret of ['kapso-key-SECRET', SECRET, '123456789', 'admin-secret']) assert.ok(!r.text.includes(secret), 'no filtra secretos');
+  } finally { kapso.close(); }
+  const plain = await startApp({ channels: null });
+  try {
+    assert.deepEqual((await plain.call('GET', '/health')).json.channels, { sms: 'simulated', email: 'simulated', voice: 'simulated', whatsapp_webhook: false });
+  } finally { plain.close(); }
+});
+
 // --- PUT /contacts, SSE y misceláneos ----------------------------------------------------------
 
 const signedPut = (app, phone, path, payload) => {
