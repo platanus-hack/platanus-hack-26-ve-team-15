@@ -29,6 +29,10 @@ class PacketProcessor(
     
     // Delegate for callbacks
     var delegate: PacketProcessorDelegate? = null
+
+    // Receives every EMERGENCY packet seen, including ones this node only relays.
+    // Called on a per-peer worker: must not block (hand off, e.g. tryEmit on a SharedFlow).
+    @Volatile var emergencySink: EmergencyPacketSink? = null
     
     // Packet relay manager for centralized relay decisions
     private val packetRelayManager = PacketRelayManager(myPeerID)
@@ -145,6 +149,8 @@ class PacketProcessor(
             MessageType.LEAVE -> handleLeave(routed)
             MessageType.FRAGMENT -> handleFragment(routed)
             MessageType.REQUEST_SYNC -> handleRequestSync(routed)
+            // validPacket stays true so the relay below still forwards it; a sink failure must not stop that.
+            MessageType.EMERGENCY -> runCatching { emergencySink?.onEmergencyPacket(routed) }
             else -> {
                 // Handle private packet types (address check required)
                 if (packetRelayManager.isPacketAddressedToMe(packet)) {
@@ -267,6 +273,11 @@ class PacketProcessor(
         packetRelayManager.shutdown()
         
     }
+}
+
+/** Non-blocking hook for [MessageType.EMERGENCY] packets. */
+fun interface EmergencyPacketSink {
+    fun onEmergencyPacket(routed: RoutedPacket)
 }
 
 /**

@@ -45,6 +45,8 @@ class BluetoothMeshService(private val context: Context) : TransportBridgeServic
         private const val TAG = "BluetoothMeshService"
         private val MAX_TTL: UByte = com.bitchat.android.util.AppConstants.MESSAGE_TTL_HOPS
         private const val PEER_DISCONNECT_GRACE_MS = com.bitchat.android.util.AppConstants.Mesh.PEER_DISCONNECT_GRACE_MS
+        /** 512 B frame - 14 header - 8 sender - 8 recipient - 64 signature. Keep in sync with docs/contrato.md §2.1. */
+        const val EMERGENCY_MAX_PAYLOAD_BYTES = 418
     }
     
     // Core components - each handling specific responsibilities
@@ -1232,6 +1234,32 @@ class BluetoothMeshService(private val context: Context) : TransportBridgeServic
     /**
      * Send broadcast announce with TLV-encoded identity announcement - exactly like iOS
      */
+    /** Registers the receiver of EMERGENCY packets (see docs/contrato.md). Pass null to detach. */
+    fun setEmergencySink(sink: EmergencyPacketSink?) {
+        packetProcessor.emergencySink = sink
+    }
+
+    /**
+     * Broadcasts an opaque EMERGENCY payload. Returns true if at least one neighbor accepted the
+     * write, false if the payload is oversized or nobody could take it (the caller retries).
+     * v1 envelope, BROADCAST recipient and the standard signed envelope keep the packet within a
+     * single 512 B frame for payloads up to [EMERGENCY_MAX_PAYLOAD_BYTES].
+     */
+    suspend fun sendEmergencyPacket(payload: ByteArray, ttl: UByte = MAX_TTL): Boolean {
+        if (payload.isEmpty() || payload.size > EMERGENCY_MAX_PAYLOAD_BYTES) return false
+        val packet = BitchatPacket(
+            version = 1u,
+            type = MessageType.EMERGENCY.value,
+            senderID = hexStringToByteArray(myPeerID),
+            recipientID = SpecialRecipients.BROADCAST,
+            timestamp = System.currentTimeMillis().toULong(),
+            payload = payload,
+            signature = null,
+            ttl = ttl
+        )
+        return broadcastRoutedPacketAndReport(RoutedPacket(signPacketBeforeBroadcast(packet)))
+    }
+
     fun sendBroadcastAnnounce() {
         serviceScope.launch {
             val nickname = try { com.bitchat.android.services.NicknameProvider.getNickname(context, myPeerID) } catch (_: Exception) { myPeerID }

@@ -220,6 +220,8 @@ assert.ok(updatedPkg.scripts.gauntlet, 'Should have gauntlet script merged');
 assert.ok(fs.existsSync(path.join(adoptMockDir, 'AGENTS.md')));
 assert.ok(fs.existsSync(path.join(adoptMockDir, 'gauntlet.config.json')));
 assert.ok(fs.existsSync(path.join(adoptMockDir, 'scripts', 'gauntlet', 'gauntlet-runner.js')));
+assert.ok(fs.existsSync(path.join(adoptMockDir, 'scripts', 'jev-router.js')));
+assert.ok(fs.existsSync(path.join(adoptMockDir, 'scripts', 'sync-agents.js')));
 
 // Verify .gitignore updated (kills mutant missing.length > 0 -> <= 0)
 const gitignoreContent = fs.readFileSync(path.join(adoptMockDir, '.gitignore'), 'utf8');
