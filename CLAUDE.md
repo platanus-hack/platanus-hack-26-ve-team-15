@@ -32,6 +32,7 @@ Más `.claude/`, `.agents/`, `scripts/` y `gauntlet.config.json` (plantilla de a
 - `docs/contrato.md`: paquete binario, APIs, registro, herramientas del agente. **Léelo antes de
   implementar cualquier lado del protocolo.** D-1 y D-2 están cerradas.
 - `docs/fases.md`: entregable, rol, criterio de terminado y prueba de cada fase.
+- `docs/reparto.md`: reparto de trabajo entre dos desarrolladores, plan de 2 días y primeros pasos.
 
 ### Las 5 fases
 
