@@ -37,6 +37,13 @@ android {
             "GITHUB_RELEASE_CERT_SHA256",
             "\"$normalizedGithubReleaseCertSha256\""
         )
+        // Backend base URL for registration/egress. Empty by default; set with -PBALIZA_API_URL=...
+        // or in ~/.gradle/gradle.properties. A debug build can also change it at runtime.
+        buildConfigField(
+            "String",
+            "BALIZA_API_URL",
+            "\"${providers.gradleProperty("BALIZA_API_URL").orElse("").get()}\""
+        )
 
         testInstrumentationRunner = "com.bitchat.android.ui.PerformanceTestRunner"
         vectorDrawables {
