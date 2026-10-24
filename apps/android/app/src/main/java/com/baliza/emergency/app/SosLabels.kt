@@ -45,6 +45,16 @@ object SosLabels {
         SosState.REJECTED -> Tone.BAD
     }
 
+    /** One line for the debug panel about the mesh test packet. */
+    fun testLine(state: SosState, attempts: Int): String = when (state) {
+        SosState.IDLE -> "Prueba: sin enviar"
+        SosState.UNSENT -> "Prueba: ningún vecino la aceptó (intentos $attempts)"
+        SosState.SENT -> "Prueba: aceptada por un vecino (intentos $attempts)"
+        SosState.UNCONFIRMED -> "Prueba: enviada, sin respuesta, como se espera (intentos $attempts)"
+        SosState.STOPPED -> "Prueba: dejó de reintentar (intentos $attempts)"
+        else -> "Prueba: ${title(state)} (intentos $attempts)"
+    }
+
     /** True while the phone is still resending, so the screen should offer to cancel. */
     fun active(state: SosState): Boolean = state != SosState.IDLE
 }

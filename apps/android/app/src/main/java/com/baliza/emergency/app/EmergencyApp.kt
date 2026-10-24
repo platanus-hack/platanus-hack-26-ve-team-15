@@ -144,6 +144,11 @@ class EmergencyApp private constructor(context: Context) {
         val heard: StateFlow<List<HeardPacket>> = _heard.asStateFlow()
 
         private var testSender: SosSender? = null
+        private var testWatcher: kotlinx.coroutines.Job? = null
+        private val _testStatus = MutableStateFlow(SosStatus(com.baliza.emergency.sos.SosState.IDLE))
+
+        /** State of the mesh test packet, so the debug panel can say whether any neighbour took it. */
+        val testStatus: StateFlow<SosStatus> = _testStatus.asStateFlow()
 
         init {
             scope.launch { bleTransport.incoming.collect(::remember) }
@@ -202,6 +207,8 @@ class EmergencyApp private constructor(context: Context) {
             val throwawayIdentity = UserIdentity(signing.seed, signing.publicKey, sealing.privateKey, sealing.publicKey)
             val test = SosSender(bleTransport, throwawayIdentity, { server }, scope, store = NoIncidentStore)
             testSender = test
+            testWatcher?.cancel()
+            testWatcher = scope.launch { test.status.collect { _testStatus.value = it } }
             test.start(
                 SosRequest(
                     category = 7, severity = 1, publicText = "PRUEBA Baliza",
@@ -210,7 +217,11 @@ class EmergencyApp private constructor(context: Context) {
             )
         }
 
-        fun stopTestPacket() { testSender?.cancel(); testSender = null }
+        fun stopTestPacket() {
+            testSender?.cancel(); testSender = null
+            testWatcher?.cancel(); testWatcher = null
+            _testStatus.value = SosStatus(com.baliza.emergency.sos.SosState.IDLE)
+        }
 
         /**
          * Debug: forgets the keys, the contacts, the pinned server and the current incident, as on a fresh

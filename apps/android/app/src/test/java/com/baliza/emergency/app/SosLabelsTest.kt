@@ -39,6 +39,16 @@ class SosLabelsTest {
     }
 
     @Test
+    fun `the test packet line says whether a neighbour took it`() {
+        assertEquals("Prueba: sin enviar", SosLabels.testLine(SosState.IDLE, 0))
+        assertTrue(SosLabels.testLine(SosState.UNSENT, 3).contains("ningún vecino"))
+        assertTrue(SosLabels.testLine(SosState.SENT, 1).contains("aceptada por un vecino"))
+        assertTrue(SosLabels.testLine(SosState.UNCONFIRMED, 4).contains("intentos 4"))
+        assertTrue(SosLabels.testLine(SosState.STOPPED, 9).contains("dejó de reintentar"))
+        for (state in SosState.entries) assertTrue("$state", SosLabels.testLine(state, 2).startsWith("Prueba:"))
+    }
+
+    @Test
     fun `only idle is not active`() {
         assertFalse(SosLabels.active(SosState.IDLE))
         for (state in SosState.entries.filter { it != SosState.IDLE }) assertTrue(SosLabels.active(state))
