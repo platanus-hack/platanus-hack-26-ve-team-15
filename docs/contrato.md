@@ -260,14 +260,24 @@ Los nodos intermedios (B) no guardan paquetes de otros; esa "custodia" queda fue
 - Consulta al subir un paquete nuevo y luego cada 20 s mientras siga oyendo ese `incident_id`.
 - Los mensajes pendientes (tipos 3, 5, 7) se inyectan al mesh con TTL 7.
 - Si el egress que subió el SOS se fue, cualquier otro que oiga el reintento recoge lo pendiente.
+- **El origen también consulta su propio buzón** mientras su incidente esté activo (cada 20 s, con su
+  `sender_id` y su `incident_id`). Es la única vía por la que le llega el ACK 1 «contactos avisados»: el
+  ACK síncrono del servidor dice «en gestión» y el segundo espera en el buzón.
+- **Un teléfono nunca oye su propio paquete** retransmitido por un vecino. Si tiene internet, sube su
+  propio paquete directamente y entrega la respuesta del servidor a su `SosSender` sin pasar por el mesh.
+- Un egress deduplica por contenido durante 10 s (los relevos entregan varias veces el mismo reintento y
+  cada `POST` cuenta para el límite por `egress_id`); el reintento de 15 s del origen sí pasa.
+- El cursor del buzón es global, así que no se usa: cada consulta pide todo lo pendiente (`cursor: null`)
+  y el teléfono descarta lo ya entregado por su `id`.
 
 **R3. Bandeja de salida en el egress.**
 - Un egress que recibe un paquete sin tener internet lo guarda y lo sube cuando vuelva la conexión.
   El backend lo acepta igual: la ventana de `timestamp` es de 7 días (§3.5) y la idempotencia
   evita duplicados.
 - Guarda como máximo 200 paquetes o 24 h, lo que ocurra primero (los más viejos salen primero).
-- Reintenta cada 30 s con espera creciente hasta 5 min. Un `4xx` descarta el paquete; un `5xx` o la
-  falta de red lo conservan.
+- Reintenta cada 30 s con espera creciente hasta 5 min. Un `4xx` descarta el paquete; un `5xx`, un
+  **`429`** (es un límite, no un veredicto sobre el paquete) o la falta de red lo conservan.
+- Solo se encolan paquetes **oídos de otro teléfono**. Los propios no: su emisor ya reintenta (R1).
 - La bandeja no lleva datos personales aparte de lo que ya viaja en el paquete (sellado).
 
 **R4. Estados honestos en la UI del origen.**

@@ -6,6 +6,12 @@ import com.baliza.emergency.EmergencyMeshTransport
 import com.baliza.emergency.codec.EmergencyCodec
 import com.baliza.emergency.codec.EmergencyPacket
 import com.baliza.emergency.crypto.Ed25519
+import com.baliza.emergency.egress.EgressClient
+import com.baliza.emergency.egress.EgressTransport
+import com.baliza.emergency.egress.NetworkMonitor
+import com.baliza.emergency.egress.Outbox
+import com.baliza.emergency.egress.PrefsOutboxStore
+import com.baliza.emergency.identity.UserIdentity
 import com.baliza.emergency.crypto.SealedBox
 import com.baliza.emergency.identity.ServerKeys
 import com.baliza.emergency.identity.UserIdentityStore
@@ -96,12 +102,27 @@ class EmergencyApp private constructor(context: Context) {
             if (current !== attachedMesh) {
                 val first = attachedMesh == null
                 attachedMesh = current
-                if (!first) transport.rebind()
+                if (!first) bleTransport.rebind()
             }
             return current
         }
 
-        val transport: BleEmergencyMeshTransport = BleEmergencyMeshTransport.over(::mesh)
+        /** The raw mesh. */
+        private val bleTransport: BleEmergencyMeshTransport = BleEmergencyMeshTransport.over(::mesh)
+
+        /**
+         * The mesh plus egress: a phone with internet uploads what it sends and what it hears, and the
+         * server's answers come back to the SOS sender even though a phone never hears itself.
+         */
+        val transport: EgressTransport = EgressTransport(
+            mesh = bleTransport,
+            api = EgressClient({ settings.baseUrl }, RegistrationClient.defaultClient()),
+            outbox = Outbox(PrefsOutboxStore.create(appContext), System::currentTimeMillis),
+            scope = scope,
+            online = NetworkMonitor(appContext).online,
+            ownSenderIdHex = identity.senderIdHex,
+            serverSignKey = { identityStore.serverKeys()?.signPublicKey }
+        )
 
         val sender = SosSender(
             transport = transport,
@@ -125,10 +146,13 @@ class EmergencyApp private constructor(context: Context) {
         private var testSender: SosSender? = null
 
         init {
-            scope.launch { transport.incoming.collect(::remember) }
+            scope.launch { bleTransport.incoming.collect(::remember) }
             // MeshServiceHolder may swap the instance at any time; notice within seconds.
             scope.launch { while (true) { delay(MESH_CHECK_MS); mesh() } }
-            scope.launch { sender.resume() }
+            scope.launch {
+                // Keep asking the server about an incident that survived a restart.
+                if (sender.resume()) sender.status.value.incidentIdHex?.let(transport::trackOwn)
+            }
         }
 
         /** Saves the contacts locally first, so a failed attempt (no internet) is not lost. */
@@ -159,7 +183,10 @@ class EmergencyApp private constructor(context: Context) {
             return withContext(dispatcher) { sender.start(request) }
         }
 
-        suspend fun cancelSos() = withContext(dispatcher) { sender.cancel() }
+        suspend fun cancelSos() = withContext(dispatcher) {
+            sender.status.value.incidentIdHex?.let(transport::forgetOwn)
+            sender.cancel()
+        }
 
         /**
          * Debug: a real signed SOS sealed to a throwaway key, so the mesh can be exercised before any
@@ -167,10 +194,13 @@ class EmergencyApp private constructor(context: Context) {
          */
         suspend fun sendTestPacket(): StartResult = withContext(dispatcher) {
             testSender?.cancel()
-            val throwaway = SealedBox.generateKeyPair()
+            // Everything here is throwaway, the signer included: signed with the real identity, a test packet
+            // would be accepted by the backend as a genuine SOS and alert the user's real contacts.
+            val sealing = SealedBox.generateKeyPair()
             val signing = Ed25519.generate()
-            val server = ServerKeys("test", signing.publicKey, throwaway.publicKey)
-            val test = SosSender(transport, identity, { server }, scope, store = NoIncidentStore)
+            val server = ServerKeys("test", signing.publicKey, sealing.publicKey)
+            val throwawayIdentity = UserIdentity(signing.seed, signing.publicKey, sealing.privateKey, sealing.publicKey)
+            val test = SosSender(bleTransport, throwawayIdentity, { server }, scope, store = NoIncidentStore)
             testSender = test
             test.start(
                 SosRequest(
@@ -188,6 +218,7 @@ class EmergencyApp private constructor(context: Context) {
          */
         suspend fun resetForTesting() = withContext(dispatcher) {
             testSender?.cancel(); testSender = null
+            sender.status.value.incidentIdHex?.let(transport::forgetOwn)
             sender.cancel()
             identityStore.wipe()
             contactStore.clear()
