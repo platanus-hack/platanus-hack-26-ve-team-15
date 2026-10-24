@@ -3,6 +3,7 @@ import { adminRoutes } from './admin.js';
 import { dashboardRoutes } from './dashboard.js';
 import { route } from './helpers.js';
 import { meshRoutes } from './mesh.js';
+import { notifyRoutes } from './notify.js';
 import { repliesRoutes } from './replies.js';
 import { usersRoutes } from './users.js';
 
@@ -19,6 +20,7 @@ export function allRoutes(app) {
     ...meshRoutes(app),
     ...repliesRoutes(app),
     ...adminRoutes(app),
+    ...notifyRoutes(app),
     ...dashboardRoutes(app),
   ];
 }
