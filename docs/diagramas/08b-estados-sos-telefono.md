@@ -3,8 +3,8 @@
 Lo que la app puede decirle al usuario sobre su SOS (`SosState`) y qué evento produce cada
 transición. La UI nunca muestra "recibido" ni "avisados" sin un ACK firmado por el servidor.
 
-Estado: **propuesto (calcado del código)**, sincronizado con `431db2d`. Fuentes: `SosModels.kt`
-(`SosState`, `RetrySchedule`), `SosSender.kt`; `contrato.md` §5.1 (R1 y R4).
+Estado: **propuesto (calcado del código)**, sincronizado con `6f254e6`. Fuentes: `SosModels.kt`
+(`SosState`, `RetrySchedule`), `SosSender.kt`, `SosScreen.kt`; `contrato.md` §5.1 (R1 y R4).
 
 ```mermaid
 stateDiagram-v2
@@ -54,7 +54,9 @@ stateDiagram-v2
   flechas de `SENT`, `UNCONFIRMED` y `STOPPED` y omite las de `UNSENT` para no saturar.
 - **Sobrevive a la muerte del proceso.** `PrefsIncidentStore` guarda el paquete y el último estado de
   ACK; `resume()` vuelve a `UNSENT` con una ventana nueva o al estado de ACK guardado.
-- **`cancel()` no avisa al servidor.** Cerrar el incidente es un UPDATE con `severity = 0` (R6), que el
-  teléfono todavía no envía.
+- **`cancel()` no avisa al servidor.** Lo llama el botón "Cancelar aviso" de `SosScreen`, que advierte
+  "Dejaré de reenviarlo. Si ya llegó a tus contactos, no se puede deshacer". Cerrar el incidente en el
+  servidor sería un UPDATE con `severity = 0` (R6), que el teléfono todavía no envía: el incidente queda
+  `open` en el panel.
 - **Un incidente a la vez.** `start()` devuelve `AlreadyActive` si hay otro en curso, y `NotRegistered`
   si no hay llaves del servidor (falta `POST /v1/users`).

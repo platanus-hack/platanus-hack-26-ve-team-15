@@ -4,8 +4,8 @@ La segunda capa de la decisión: lo que hace la app con cada `ReceivedEmergencyP
 `EmergencyMeshTransport.incoming`. Decide si entrega el paquete localmente (es para mí), lo sube (soy
 egress) o no hace nada. El reenvío ya lo hizo bitchat en paralelo ([07a](07a-flujo-nodo-bitchat.md)).
 
-Estado: **propuesto**, sincronizado con `431db2d`. La rama de entrega local de un **ACK** existe en
-`SosSender.onReceived` (en azul). La entrega de MSG_IN y CMD_RESULT y toda la rama de egress no
+Estado: **propuesto**, sincronizado con `6f254e6`. La rama de entrega local de un **ACK** existe en
+`SosSender.onReceived` (en azul) y ya corre en la app (`EmergencyApp`). La entrega de MSG_IN y CMD_RESULT y toda la rama de egress no
 existen. Fuentes: `SosSender.kt`; `contrato.md` §3.2, §3.4, §4 y §5.1 (R2, R3, R4).
 
 ```mermaid
@@ -52,5 +52,8 @@ también son propuestas.
   consultando el buzón. En el diagrama, la rama "ya subido" termina en "ignorar" para no cruzar
   flechas; la implementación debe refrescar la marca de "oído".
 - **Hoy solo hay un incidente a la vez** (`StartResult.AlreadyActive`), y `SosSender` solo escucha ACK.
+- **Un segundo oyente, solo de depuración.** `EmergencyApp` también recoge cada paquete de `incoming`
+  para la lista "Paquetes oídos" (tipo, `incident_id`, saltos, `envelopeTtl`). No decide nada; no se
+  dibuja.
 - **Sin TTL en esta capa.** El `ttl` interno solo mide saltos y no está firmado (§3.2).
 - **Sin lista blanca del modo demo** (D-2, quitada con tu aprobación).

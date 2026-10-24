@@ -3,7 +3,7 @@
 Quién usa Baliza Vital y con qué sistemas externos habla. El mesh BLE lleva el paquete del
 teléfono sin internet hasta un egress, y el backend, junto al agente IA, avisa a los contactos y responde por el mismo camino.
 
-Estado: **propuesto**. Sincronizado con `431db2d`: los proveedores son los que usa
+Estado: **propuesto**. Sincronizado con `6f254e6`: los proveedores son los que usa
 `backend/src/channels.js` y `llm.js`. Fuentes: `CLAUDE.md`, `docs/contrato.md` §1, §4–§7,
 `backend/README.md`.
 
@@ -57,9 +57,9 @@ flowchart LR
 
 | Elemento | Nombre real en el repo | Estado |
 |----------|------------------------|--------|
-| App en los tres papeles (origen, relay, egress) | `apps/android`, paquete `com.baliza.emergency` | Existen transporte, codec, sellado, identidad, registro y `SosSender`; **sin conectar a la app**. El papel de egress no tiene código |
+| App en los tres papeles (origen, relay, egress) | `apps/android`, paquete `com.baliza.emergency` | Existen la interfaz (registro y SOS) y el módulo Baliza cableado en `EmergencyApp`: origen y relay funcionan. **El papel de egress no tiene código** |
 | Mesh BLE | bitchat: `BluetoothMeshService`, `PacketProcessor`, `MessageType.EMERGENCY = 0x30` | Existe |
-| Backend (con el agente dentro) | `backend/src/` (`api.js`, `egress.js`, `agent.js`, …) | **Existe** (112 pruebas) |
+| Backend (con el agente dentro) | `backend/src/` (`api.js`, `routes/`, `egress.js`, `agent.js`, …) | **Existe** (132 pruebas) |
 | Panel | `dashboard/` (Leaflet, SSE) | **Existe** |
 | Proveedores | `backend/src/channels.js`, `llm.js` | Integrados; sin credenciales caen a `simulated` |
 

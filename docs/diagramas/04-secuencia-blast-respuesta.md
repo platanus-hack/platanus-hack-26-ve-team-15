@@ -4,7 +4,7 @@ Qué pasa después del SOS (diagrama 3): el agente avisa a los contactos por Wha
 llamada con voz IA. El teléfono recibe el ACK de avance, y la respuesta de un familiar vuelve sellada al
 teléfono sin internet a través del buzón y el mesh, donde se lee en voz alta.
 
-Estado: **propuesto**, sincronizado con `431db2d`. El lado del backend existe (`agent.js`,
+Estado: **propuesto**, sincronizado con `6f254e6`. El lado del backend existe (`agent.js`,
 `channels.js`, `replies.js`, `radio.js`). En el teléfono faltan el cliente egress (C), la apertura del
 MSG_IN, la lectura en voz alta y la baliza UPDATE (R6). Fuentes: `backend/README.md`; `contrato.md`
 §3.3, §5, §5.1 (R2, R5, R6), §6 y §7.

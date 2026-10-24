@@ -5,7 +5,7 @@ MSG_IN, CMD_RESULT), la presencia de egress y la cola de envío por radio (R5), 
 la ventana de 24 h de WhatsApp. `users`, `incidents` y `contacts` vienen de [06a](06a-er-identidad-incidentes.md);
 aquí solo se muestra su clave.
 
-Estado: **propuesto (calcado del código)**, sincronizado con `431db2d`. Fuentes: `store.js`,
+Estado: **propuesto (calcado del código)**, sincronizado con `6f254e6`. Fuentes: `store.js`,
 `context.js`, `radio.js`, `commands.js`; contrato §5, §5.1 (R2, R5) y §7.
 
 ```mermaid

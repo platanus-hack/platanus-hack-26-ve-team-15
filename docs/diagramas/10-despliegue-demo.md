@@ -4,7 +4,7 @@ Dónde corre cada pieza el día del demo: tres teléfonos Android (A sin interne
 separados para forzar un salto, una laptop de respaldo, el backend y el panel en Render, y el panel
 proyectado. Los avisos llegan a teléfonos del equipo (datos sintéticos).
 
-Estado: **propuesto**, sincronizado con `431db2d`. El papel de la laptop está **por confirmar**.
+Estado: **propuesto**, sincronizado con `6f254e6`. El papel de la laptop está **por confirmar**.
 Fuentes: `render.yaml`, `backend/README.md`, `dashboard/README.md`, `fases.md` y `reparto.md`.
 
 ```mermaid
@@ -53,7 +53,7 @@ flowchart LR
 |-------|---------------|
 | A | Modo avión con Bluetooth encendido; ubicación activada (GPS sin red); registrado antes con internet (`POST /v1/users`) para tener las llaves del servidor |
 | B | Sin SIM o sin datos, Bluetooth encendido, app abierta; en el medio, a la vista de A y de C |
-| C | Datos móviles, "colaborar como egress" activo; lejos de A para que el salto pase por B |
+| C | Datos móviles, "colaborar como egress" activo (**no existe todavía**); lejos de A para que el salto pase por B |
 | Laptop | Panel abierto con `?api=https://<backend>` y `DASHBOARD_TOKEN`; hotspot listo; copia local del backend lista para arrancar |
 | Render | `BALIZA_SIGN_SEED_HEX` y `BALIZA_SEAL_SK_HEX` fijados. Si se regeneran las llaves, los teléfonos registrados dejan de entender al servidor |
 | Render | `ADMIN_TOKEN` (para verificar contactos y simular respuestas) y `DASHBOARD_TOKEN` definidos |
@@ -68,7 +68,8 @@ flowchart LR
   dos niveles, sin código extra:
   1. **Red:** comparte internet a C (hotspot) si falla el 4G del lugar.
   2. **Backend:** corre `npm start` en `backend/` y el panel con `python3 -m http.server`, y C apunta a
-     ella si Render falla. Ojo: la copia local tiene **otras llaves** salvo que use las mismas
+     ella si Render falla. Ya se puede sin recompilar: en builds de depuración, `DebugScreen` cambia la
+     URL del servidor (`ApiSettings`). Ojo: la copia local tiene **otras llaves** salvo que use las mismas
      `BALIZA_SIGN_SEED_HEX` y `BALIZA_SEAL_SK_HEX`, y otros usuarios registrados.
 
   Alternativa con código: un cuarto teléfono Android como egress de reserva. Si "egress" se refería a
@@ -82,5 +83,8 @@ flowchart LR
   canales reales, el ACK dice `[SIMULADO]` y el panel marca `simulado`: no se presenta como aviso real.
 - **Llamada con voz IA** no probada contra la API real (`backend/README.md`). Conviene probarla antes o
   sacarla del guion.
-- **Falta en el teléfono** lo que hace funcionar este despliegue: la UI SOS, el cableado de
-  `SosSender` y el cliente egress de C (diagrama 2).
+- **Falta en el teléfono** lo que hace funcionar este despliegue: el cliente egress de C (diagrama 2).
+  La UI SOS y el cableado de `SosSender` ya existen. Mientras tanto, A → B se puede mostrar con
+  "Enviar prueba" del panel de depuración, que hace aparecer los saltos en "Paquetes oídos" de B y C.
+- **Registro antes del demo.** A se registra con internet desde `RegistrationScreen`; si falla, los
+  contactos quedan guardados en el teléfono y se reintenta.

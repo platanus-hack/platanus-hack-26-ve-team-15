@@ -4,7 +4,7 @@ Un `CMD` firmado por el usuario viaja por el mesh como cualquier paquete. El bac
 bandera de la función, la idempotencia y los topes diarios, ejecuta un **mock** y deja un `CMD_RESULT`
 sellado al usuario en el buzón. Nada toca bancos ni plataformas reales.
 
-Estado: **propuesto**, sincronizado con `431db2d`. El backend existe (`egress.js` → `processCmd`,
+Estado: **propuesto**, sincronizado con `6f254e6`. El backend existe (`egress.js` → `processCmd`,
 `commands.js`); en el teléfono no hay código de CMD ni cliente egress. Fases 4 y 5, detrás de
 `FEATURE_PAYMENTS` y `FEATURE_RIDES` (apagadas por defecto). Fuentes: `contrato.md` §3.3, §7 y §8.
 

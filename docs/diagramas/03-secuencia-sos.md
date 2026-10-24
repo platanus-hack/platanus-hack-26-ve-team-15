@@ -4,15 +4,15 @@ Recorrido completo de un SOS: A (sin internet), luego B (relay), luego C (egress
 después, el ACK firmado por el servidor vuelve por el mesh hasta A. Incluye los reintentos (R1) y la
 recogida del ACK de avance por el buzón (R2).
 
-Estado: **propuesto**, sincronizado con `431db2d`. Existen y tienen pruebas: `SosSender` en A (sin
-conectar a la app), el relevo en B y todo el backend. **No existe el cliente egress de C**: subir a
+Estado: **propuesto**, sincronizado con `6f254e6`. Existen y tienen pruebas: en A, el botón SOS
+(`SosScreen`) y `SosSender`, cableado en `EmergencyApp`; el relevo en B y todo el backend. **No existe el cliente egress de C**: subir a
 `/v1/egress`, reinyectar y consultar el buzón siguen propuestos. Fuentes: `SosSender.kt`,
 `egress.js`, `agent.js`, `context.js`; `contrato.md` §3, §4, §5.1 y §7.
 
 ```mermaid
 sequenceDiagram
   autonumber
-  participant A as A · origen<br/>SosSender
+  participant A as A · origen<br/>SosScreen · SosSender
   participant B as B · relay<br/>PacketProcessor
   participant C as C · egress<br/>(cliente propuesto)
   participant API as Backend<br/>egress.js
@@ -20,6 +20,7 @@ sequenceDiagram
   participant AG as Agente<br/>agent.js
   participant MB as Buzón<br/>/v1/mailbox/poll
 
+  Note over A: botón SOS → EmergencyApp.startSos<br/>ubicación de SosLocationProvider
   Note over A: start(): SOS seq=1, blob SealedBox.seal a server.seal_pk<br/>EmergencyCodec.sign "BALIZA-V1" · PrefsIncidentStore.save
   Note over A: transport.send(wire, 7) → sendEmergencyPacket<br/>sobre v1, BROADCAST (≤ 512 B)
 

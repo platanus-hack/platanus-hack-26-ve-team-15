@@ -6,7 +6,7 @@ para poder reescribirlo. Big-endian.
 El cuerpo, la firma y el sellado están en [09b](09b-paquete-cuerpo-firma.md); el sobre de bitchat
 que lo transporta, en [09c](09c-paquete-sobre-bitchat.md).
 
-Estado: **propuesto (calcado del código)**, revisado contra `431db2d`. Coincide con
+Estado: **propuesto (calcado del código)**, revisado contra `6f254e6`. Coincide con
 `EmergencyCodec.encodeUnsigned` (Android) y `backend/src/codec.js`: 39 B de cabecera, `TTL_OFFSET = 2`,
 `NO_LOCATION = Int.MIN_VALUE`. Fuente: `contrato.md` §3.1–§3.4 y los vectores de
 `docs/examples/examples.json`.

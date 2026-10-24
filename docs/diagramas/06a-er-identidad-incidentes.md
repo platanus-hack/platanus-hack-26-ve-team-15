@@ -4,7 +4,7 @@ Primera mitad del modelo de datos real del backend (SQLite, `backend/src/store.j
 contactos, incidentes, paquetes recibidos (la tabla de idempotencia), avisos a contactos y eventos.
 La segunda mitad (buzón, radio, comandos, ventana de WhatsApp) está en [06b](06b-er-entrega-agente.md).
 
-Estado: **propuesto (calcado del código)**, sincronizado con `431db2d`. Fuente: el `SCHEMA` de
+Estado: **propuesto (calcado del código)**, sincronizado con `6f254e6`. Fuente: el `SCHEMA` de
 `store.js`; contrato §3, §4, §6 y §7.
 
 ```mermaid

@@ -28,10 +28,13 @@ Los diagramas que pasaban de ~15 elementos se dividieron en partes (a, b, c).
 | 9c | [Paquete: sobre de bitchat](09c-paquete-sobre-bitchat.md) | propuesto (calcado del código) | [09c](img/09c-paquete-sobre-bitchat.png) |
 | 10 | [Despliegue del demo](10-despliegue-demo.md) | propuesto | [10](img/10-despliegue-demo.png) |
 
-Los "propuesto" a secas mezclan código real (backend, `SosSender`) con piezas que no existen todavía
-(cliente egress, UI, UPDATE, MSG_OUT, CMD en el teléfono). Cada diagrama marca cuál es cuál.
+Los "propuesto" a secas mezclan código real (backend, interfaz y `SosSender` en el teléfono) con piezas
+que no existen todavía (cliente egress, UPDATE, MSG_OUT, CMD en el teléfono). Cada diagrama marca cuál es
+cuál.
 
-Última sincronización: `431db2d` (`main`, 2026-10-24). La anterior fue `8e2b1e1`.
+Última sincronización: `6f254e6` (`main`, 2026-10-24). La anterior fue `431db2d`. Desde entonces: la
+interfaz Baliza en Android con `SosSender` cableado (`EmergencyApp`), y el backend partido en `routes/`
+sin cambios de comportamiento ni de esquema.
 
 ## Decisiones
 
@@ -61,7 +64,7 @@ Los "propuesto" a secas mezclan código real (backend, `SosSender`) con piezas q
 | 9 | API del dashboard fuera del contrato | 2 | Resuelto en código | `GET /v1/incidents`, `/v1/incidents/{sender}/{incident}`, `/v1/events`, SSE `/v1/stream`; solo lectura, sin `PATCH`. Falta pasarla al contrato |
 | 10 | Por dónde responde el contacto | 4 | Resuelto en código | Webhook de Kapso, `/r/{token}`, `/v1/replies`, webhook SMS de Twilio |
 | 11 | ¿El `CMD` pasa por el LLM? | 5 | Resuelto en código | No: despacho en código con esquema estricto; el LLM solo redacta avisos |
-| 12 | "Laptop como egress de respaldo": una laptop no corre bitchat | 10 | **Abierto** | La laptop respalda red (hotspot) y backend (copia local con las mismas llaves); un 4.º teléfono si se quiere un egress real |
+| 12 | "Laptop como egress de respaldo": una laptop no corre bitchat | 10 | **Abierto** | La laptop respalda red (hotspot) y backend (copia local con las mismas llaves; el teléfono ya puede apuntarle desde `DebugScreen`); un 4.º teléfono si se quiere un egress real |
 | 13 | Margen del frame: §2 dice "margen de 6 B" y §2.1 suma 512 exactos. Con compresión, 418 B pueden pasar a 419 B y el sobre a 513 B (se fragmenta) | 9c | **Abierto** | Bajar el límite del paquete interno a 412 B, o aceptar la fragmentación y agregar ese borde a `EmergencyPacketTest` |
 | 14 | Base de datos: el encargo pedía Postgres + PostGIS (y `reparto.md` lo proponía); el código usa SQLite (`node:sqlite`) en el disco de Render, sin PostGIS | 2, 6a, 6b, 10 | **Abierto** | SQLite para el demo; Postgres solo si hace falta más de una réplica (`store.js` es el único punto de cambio). Los ER muestran lo real |
 | 15 | WhatsApp: el bit «sms» de `channels` sale por WhatsApp (Kapso) si hay credenciales; el contrato (§3.3, §6) solo habla de SMS | 1, 4 | **Abierto** | Documentar en §6 que «sms» significa "mensaje al teléfono del contacto" (WhatsApp o SMS) |
@@ -70,8 +73,10 @@ Los "propuesto" a secas mezclan código real (backend, `SosSender`) con piezas q
 - La ubicación exacta viaja **en claro** en la cabecera y la ve cualquier nodo del mesh (9b).
 - Un egress no puede verificar la firma del usuario (no tiene la llave pública) y sube todo lo que
   decodifica; filtra el backend (7b).
-- El módulo Baliza de Android **no está conectado a la app**: nadie llama a
-  `BleEmergencyMeshTransport.over` ni crea un `SosSender`. Y no hay cliente egress (2).
+- **No hay cliente egress en Android** (2, 3, 10). El SOS ya sale de A y salta por el mesh, pero no
+  llega al backend: es la pieza que falta para que el demo A → B → C → backend funcione.
+- "Cancelar aviso" solo detiene los reintentos en el teléfono; el incidente queda `open` en el panel
+  hasta que exista el UPDATE con `severity = 0` (8b).
 - La nota del SOS queda **en claro** en la base del backend, sin plazo de retención (6a).
 - Con canales reales, solo reciben avisos los contactos `verified` (10).
 
@@ -95,9 +100,9 @@ done
 
 Cuando se pida "sincroniza": `git fetch`, y `git log` y `git diff` desde la última sincronización (arriba)
 hasta `main`, sobre:
-- Android: `apps/android/.../com/baliza/**`, `PacketProcessor`, `PacketRelayManager`, `SecurityManager`,
-  `BluetoothMeshService`, `BinaryProtocol`;
-- backend: `backend/src/**` (sobre todo `store.js`, `egress.js`, `agent.js`, `context.js`, `api.js`) y
+- Android: `apps/android/.../com/baliza/**` (incluye `app/` y `ui/`), `MainActivity`, `PacketProcessor`,
+  `PacketRelayManager`, `SecurityManager`, `BluetoothMeshService`, `BinaryProtocol`;
+- backend: `backend/src/**` (sobre todo `store.js`, `egress.js`, `agent.js`, `context.js`, `routes/`) y
   `backend/README.md`;
 - panel: `dashboard/app.js`;
 - despliegue: `render.yaml`;
@@ -108,5 +113,5 @@ sincronización. Qué mirar según el cambio:
 - bitchat: 2, 3, 7a y 9c;
 - `store.js`: 6a y 6b;
 - `egress.js`, `agent.js`, `commands.js`: 3, 4, 5 y 8a;
-- `SosSender`: 3, 7b y 8b;
+- `SosSender`, `EmergencyApp`, `ui/`: 2, 3, 7b y 8b;
 - `render.yaml`: 10.

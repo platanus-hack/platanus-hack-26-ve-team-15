@@ -5,7 +5,7 @@ deduplicación, firma del sobre, entrega al sumidero y relevo con TTL. Ocurre ig
 nodos (origen, relay o egress). La capa de Baliza, que decide si subir o entregar localmente, está en
 [07b](07b-flujo-nodo-baliza.md).
 
-Estado: **propuesto (calcado del código)**; pasa a validado cuando lo revises. Revisado contra `431db2d`
+Estado: **propuesto (calcado del código)**; pasa a validado cuando lo revises. Revisado contra `6f254e6`
 (sin cambios en este flujo; solo se agregó el aviso de vecino nuevo en `onDeviceConnected`). Está
 dibujado sobre `PacketProcessor.handleReceivedPacket`, `SecurityManager.validatePacket` y
 `PacketRelayManager.handlePacketRelay` / `shouldRelayPacket`.

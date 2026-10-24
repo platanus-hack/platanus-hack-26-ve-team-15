@@ -4,7 +4,7 @@ Ciclo de vida de un incidente en el backend (`incidents.status`, ver 06a) y qué
 transición. Con borde punteado, los estados que se habían propuesto y el código no tiene. Los estados
 que ve el teléfono están en [08b](08b-estados-sos-telefono.md).
 
-Estado: **propuesto (calcado del código)**, sincronizado con `431db2d`. Fuentes:
+Estado: **propuesto (calcado del código)**, sincronizado con `6f254e6`. Fuentes:
 `agent.js` → `registrarIncidente`, `egress.js` → `processSos`; `contrato.md` §3.3 y §5.1 (R6).
 
 ```mermaid

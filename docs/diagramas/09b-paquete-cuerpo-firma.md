@@ -4,7 +4,7 @@ Lo que sigue a la cabecera de 39 B ([09a](09a-paquete-cabecera.md)): texto públ
 firma Ed25519. Muestra qué ven los nodos del mesh (en claro), qué solo abre el destinatario
 (sellado) y qué cubre la firma. Abajo, el contenido del plaintext sellado de un SOS o un UPDATE.
 
-Estado: **propuesto (calcado del código)**, revisado contra `431db2d`. Coincide con `EmergencyCodec`
+Estado: **propuesto (calcado del código)**, revisado contra `6f254e6`. Coincide con `EmergencyCodec`
 (firma sobre `"BALIZA-V1"` ‖ bytes sin `ttl`), `SealedBox.kt` y `backend/src/crypto.js`; la
 compatibilidad con libsodium está probada con `docs/examples/sealedbox-vectors.json`. Fuente:
 `contrato.md` §2.1, §3.1, §3.3 y §3.5.
