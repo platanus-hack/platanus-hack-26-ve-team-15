@@ -9,7 +9,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
 
 const WORKSPACE_DIR = path.resolve(__dirname, '..');
 
@@ -34,76 +34,86 @@ const INJECTION_PATTERNS = [
   /sudo\s+rm\s+-rf/i
 ];
 
-function scanContent(content, filePath) {
-  const issues = [];
+const INTAKE_EXTENSIONS = ['.md', '.txt', '.json'];
 
-  // Check Secrets
-  for (const { name, regex } of SECRET_PATTERNS) {
-    if (regex.test(content)) {
-      issues.push({ type: 'SECRET_LEAK', name, filePath, severity: 'CRITICAL' });
-    }
-  }
-
-  // Check Injections (if file is an external intake file)
-  if (filePath.endsWith('.md') || filePath.endsWith('.txt') || filePath.endsWith('.json')) {
-    for (const regex of INJECTION_PATTERNS) {
-      if (regex.test(content)) {
-        issues.push({ type: 'PROMPT_INJECTION_RISK', pattern: regex.source, filePath, severity: 'HIGH' });
-      }
-    }
-  }
-
-  return issues;
+function scanSecrets(content, filePath) {
+  return SECRET_PATTERNS
+    .filter(({ regex }) => regex.test(content))
+    .map(({ name }) => ({ type: 'SECRET_LEAK', name, filePath, severity: 'CRITICAL' }));
 }
 
-function scanDirectory(dir, fileList = []) {
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
+// Injection patterns only matter in files that carry external intake.
+function scanInjections(content, filePath) {
+  if (!INTAKE_EXTENSIONS.some((ext) => filePath.endsWith(ext))) return [];
+  return INJECTION_PATTERNS
+    .filter((regex) => regex.test(content))
+    .map((regex) => ({ type: 'PROMPT_INJECTION_RISK', pattern: regex.source, filePath, severity: 'HIGH' }));
+}
 
-  for (const entry of entries) {
+function scanContent(content, filePath) {
+  return [...scanSecrets(content, filePath), ...scanInjections(content, filePath)];
+}
+
+function isEnvFile(name) {
+  return (name === '.env' || name.startsWith('.env.')) && name !== '.env.example';
+}
+
+/**
+ * A local env file is the normal home of secrets, and harmless while Git can never publish it: ignored by
+ * .gitignore and not tracked. Anything else (tracked, not ignored, or no git to ask) stays an exposure.
+ */
+function isIgnoredAndUntracked(workspace, relPath) {
+  const git = (args) => execFileSync('git', args, { cwd: workspace, stdio: 'ignore' });
+  try {
+    git(['ls-files', '--error-unmatch', '--', relPath]);
+    return false; // tracked, even if it also matches .gitignore
+  } catch (e) { /* untracked, or not a repository: keep checking */ }
+  try {
+    git(['check-ignore', '-q', '--', relPath]);
+    return true;
+  } catch (e) {
+    return false; // not ignored, or git cannot tell: fail closed
+  }
+}
+
+const SKIPPED_ENTRIES = new Set(['node_modules', '.git', 'dist', 'build', '.next', 'scratch']);
+const MAX_SCANNED_BYTES = 500000;
+
+// Text files under 500 KB are read for secrets; binary or unreadable ones are skipped.
+function scanFileContents(fullPath, relPath) {
+  try {
+    if (fs.statSync(fullPath).size >= MAX_SCANNED_BYTES) return [];
+    return scanContent(fs.readFileSync(fullPath, 'utf8'), relPath);
+  } catch (e) {
+    return [];
+  }
+}
+
+function scanFile(fullPath, relPath, name, workspace, fileList) {
+  // An env file Git ignores and does not track cannot be committed: it is where the secrets belong, so
+  // neither its presence nor its contents are reported. Any other env file is an exposure.
+  if (isEnvFile(name)) {
+    if (isIgnoredAndUntracked(workspace, relPath)) return;
+    fileList.push({
+      type: 'EXPOSED_ENV_FILE',
+      name: `Exposed environment file (${name})`,
+      filePath: relPath,
+      severity: 'CRITICAL'
+    });
+  }
+  fileList.push(...scanFileContents(fullPath, relPath));
+}
+
+function scanDirectory(dir, fileList = [], workspace = WORKSPACE_DIR) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (SKIPPED_ENTRIES.has(entry.name)) continue;
     const fullPath = path.join(dir, entry.name);
-    const relPath = path.relative(WORKSPACE_DIR, fullPath);
-
-    // Skip ignored directories
-    if (
-      entry.name === 'node_modules' ||
-      entry.name === '.git' ||
-      entry.name === 'dist' ||
-      entry.name === 'build' ||
-      entry.name === '.next' ||
-      entry.name === 'scratch'
-    ) {
-      continue;
-    }
-
     if (entry.isDirectory()) {
-      scanDirectory(fullPath, fileList);
+      scanDirectory(fullPath, fileList, workspace);
     } else if (entry.isFile()) {
-      // Check if .env file is being tracked
-      if (entry.name === '.env' || entry.name.startsWith('.env.')) {
-        if (entry.name !== '.env.example') {
-          fileList.push({
-            type: 'EXPOSED_ENV_FILE',
-            name: `Exposed environment file (${entry.name})`,
-            filePath: relPath,
-            severity: 'CRITICAL'
-          });
-        }
-      }
-
-      // Check contents of text files
-      try {
-        const stats = fs.statSync(fullPath);
-        if (stats.size < 500000) { // Limit to files < 500KB
-          const content = fs.readFileSync(fullPath, 'utf8');
-          const fileIssues = scanContent(content, relPath);
-          fileList.push(...fileIssues);
-        }
-      } catch (e) {
-        // binary or unreadable file
-      }
+      scanFile(fullPath, path.relative(workspace, fullPath), entry.name, workspace, fileList);
     }
   }
-
   return fileList;
 }
 
@@ -124,32 +134,37 @@ function runFullScan() {
   }
 }
 
+function stagedFileNames() {
+  return execSync('git diff --cached --name-only', { encoding: 'utf8' })
+    .split('\n')
+    .map((f) => f.trim())
+    .filter(Boolean);
+}
+
+function stagedIssues(stagedFiles) {
+  const issues = [];
+  for (const file of stagedFiles) {
+    if (file === '.env' || (file.startsWith('.env.') && file !== '.env.example')) {
+      issues.push({ type: 'COMMITTING_ENV', filePath: file, severity: 'CRITICAL' });
+    }
+    const fullPath = path.join(WORKSPACE_DIR, file);
+    if (fs.existsSync(fullPath)) {
+      issues.push(...scanContent(fs.readFileSync(fullPath, 'utf8'), file));
+    }
+  }
+  return issues;
+}
+
 function runPrecommit() {
   console.log('\x1b[34m🛡️  AgentShield Pre-Commit Hook Active...\x1b[0m');
   try {
-    const stagedFiles = execSync('git diff --cached --name-only', { encoding: 'utf8' })
-      .split('\n')
-      .map(f => f.trim())
-      .filter(Boolean);
-
+    const stagedFiles = stagedFileNames();
     if (stagedFiles.length === 0) {
       console.log('No staged files to scan.');
       process.exit(0);
     }
 
-    const issues = [];
-    for (const file of stagedFiles) {
-      if (file === '.env' || (file.startsWith('.env.') && file !== '.env.example')) {
-        issues.push({ type: 'COMMITTING_ENV', filePath: file, severity: 'CRITICAL' });
-      }
-      const fullPath = path.join(WORKSPACE_DIR, file);
-      if (fs.existsSync(fullPath)) {
-        const content = fs.readFileSync(fullPath, 'utf8');
-        issues.push(...scanContent(content, file));
-      }
-    }
-
-    if (issues.length > 0) {
+    if (stagedIssues(stagedFiles).length > 0) {
       console.error(`\x1b[31m❌ AgentShield Blocked Commit: Leaked secrets detected in staged diffs.\x1b[0m`);
       process.exit(1);
     }
@@ -179,25 +194,32 @@ function runTests() {
   process.exit(0);
 }
 
-const command = process.argv[2] || 'scan';
+function main() {
+  const command = process.argv[2] || 'scan';
 
-switch (command) {
-  case 'scan':
-    runFullScan();
-    break;
-  case 'precommit':
-    runPrecommit();
-    break;
-  case 'test':
-    runTests();
-    break;
-  default:
-    console.log(`
+  switch (command) {
+    case 'scan':
+      runFullScan();
+      break;
+    case 'precommit':
+      runPrecommit();
+      break;
+    case 'test':
+      runTests();
+      break;
+    default:
+      console.log(`
 AgentShield Security CLI
 Usage:
   node scripts/agent-shield.js scan        # Scan workspace for leaked secrets
   node scripts/agent-shield.js precommit   # Git pre-commit hook validator
   node scripts/agent-shield.js test        # Run security self-tests
 `);
-    process.exit(0);
+      process.exit(0);
+  }
 }
+
+// Importing the file (the tests do) must not scan or exit.
+if (require.main === module) main();
+
+module.exports = { scanDirectory, scanContent, isIgnoredAndUntracked };
