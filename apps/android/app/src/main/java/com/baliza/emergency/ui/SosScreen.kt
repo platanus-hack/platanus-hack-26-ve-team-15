@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.baliza.emergency.app.ContactProfile
 import com.baliza.emergency.app.SosLabels
+import com.baliza.emergency.replies.Reply
 import com.baliza.emergency.sos.SosSender
 import com.baliza.emergency.sos.SosState
 import com.baliza.emergency.sos.SosStatus
@@ -53,6 +54,7 @@ import com.baliza.emergency.sos.SosStatus
 fun SosScreen(
     profile: ContactProfile,
     form: SosFormState,
+    replies: List<Reply>,
     status: SosStatus,
     error: String?,
     onStart: (category: Int, severity: Int, publicText: String, note: String, contacts: Set<Int>) -> Unit,
@@ -68,6 +70,8 @@ fun SosScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         header()
+
+        if (replies.isNotEmpty()) RepliesCard(replies, names = profile.contacts.associate { it.index to it.name })
 
         if (active) {
             StatusCard(status)
@@ -178,6 +182,29 @@ private fun StatusCard(status: SosStatus) {
                 "Intentos: ${status.attempts}",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+private fun channelName(code: Int) = when (code) { 1 -> "SMS"; 2 -> "correo"; 4 -> "llamada"; else -> "mensaje" }
+
+private val timeFormat = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+
+/** What the contacts wrote back. Shown as plain text: it comes from a third party. */
+@Composable
+private fun RepliesCard(replies: List<Reply>, names: Map<Int, String>) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Text("Respuestas de tus contactos", style = MaterialTheme.typography.titleMedium, color = BalizaColors.Good)
+            replies.forEach { r ->
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        "${names[r.contactIndex] ?: "Contacto ${r.contactIndex + 1}"} · ${channelName(r.channel)} · ${timeFormat.format(java.util.Date(r.receivedAtMillis))}",
+                        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(r.text, style = MaterialTheme.typography.bodyLarge)
+                }
+            }
         }
     }
 }
