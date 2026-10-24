@@ -69,6 +69,7 @@ function windowsConfig(env) {
 function llmConfig(env) {
   return {
     apiKey: str(env.ANTHROPIC_API_KEY),
+    baseUrl: str(env.ANTHROPIC_BASE_URL),
     model: str(env.ANTHROPIC_MODEL, 'claude-opus-5-5'),
     // El LLM nunca debe retrasar un aviso de emergencia: pasado este tiempo se usa la plantilla.
     timeoutMs: int(env.LLM_TIMEOUT_MS, 6000),
