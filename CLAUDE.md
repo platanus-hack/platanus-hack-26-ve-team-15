@@ -68,8 +68,13 @@ Más `.claude/`, `.agents/`, `scripts/` y `gauntlet.config.json` (plantilla de a
 
 ### Notas operativas
 
-- Las banderas `FEATURE_PAYMENTS` y `FEATURE_RIDES` deben agregarse a `.env.example` (el permiso de
-  esta plantilla bloquea editar `.env.*` desde Claude Code; hacerlo a mano).
+- Un hook (`scripts/jev-router.js`) corre `npm run gauntlet:quick` antes de cada `git commit` y
+  `git push` hechos desde Claude Code. En este repo ese gauntlet comprueba secretos (AgentShield) y
+  que `docs/examples/examples.json` coincida con su generador. **No mide Android**: el CRAP del
+  gauntlet usa cobertura de Node y daría 0 % a todo Kotlin, por eso `apps/android` está en
+  `excludeDirs` de `gauntlet.config.json`. Android se verifica con `tools/docker-gradle.sh`.
+  Las pruebas propias del gauntlet (`scripts/gauntlet/gauntlet.test.js`) no están en `npm test`
+  porque la plantilla no trae `scripts/scaffold-generator.js`, que esas pruebas requieren.
 - Licencia: todo lo que enlaza con bitchat en el APK queda bajo GPL-3.0. Mantener el contrato y la
   interfaz `EmergencyMeshTransport` como superficie propia, con bitchat como implementación.
 - Remotos: `origin` es el repo personal y `platanus` el de la organización; hay que empujar a ambos.

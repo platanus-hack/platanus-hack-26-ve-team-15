@@ -18,6 +18,7 @@
   "crap": {
     "threshold": 8,
     "excludeDirs": [
+      "apps/android",
       "scripts/gauntlet",
       "node_modules",
       "dist",
@@ -30,6 +31,7 @@
   "mutation": {
     "maxMutants": 20,
     "excludeDirs": [
+      "apps/android",
       "scripts/gauntlet",
       "node_modules",
       "dist",
