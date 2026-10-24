@@ -6,6 +6,7 @@ import {
   parseSosPlaintext, verifyPacket,
 } from './codec.js';
 import { avisarContactos, registrarIncidente, runSosAgent } from './agent.js';
+import { ASK_CMD, startAsk } from './ai.js';
 import { buildAck, queueAck } from './context.js';
 import { unseal } from './crypto.js';
 import { executeCommand } from './commands.js';
@@ -140,7 +141,7 @@ function processPacket(ctx, packet, user, { hops, egressId, work }) {
     case MSG.MSG_OUT:
       return processMsgOut(ctx, packet, user, work);
     default:
-      return processCmd(ctx, packet, user);
+      return processCmd(ctx, packet, user, work);
   }
 }
 
@@ -200,10 +201,13 @@ function processMsgOut(ctx, packet, user, work) {
   return { ackCode: 0, ackText: 'Recibido. Enviando a tus contactos' };
 }
 
-function processCmd(ctx, packet, user) {
+function processCmd(ctx, packet, user, work) {
   const cmd = openBlob(ctx, packet, parseCmdPlaintext);
   if (!cmd) return { ackCode: 3, ackText: 'No se pudo leer el comando' };
   if (cmd.ref < 0 || cmd.ref > 0xffff) return { ackCode: 3, ackText: 'Comando con ref inválido' };
-  executeCommand(ctx, user, { incidentId: packet.incidentId, cmd: cmd.cmd, ref: cmd.ref, args: cmd.args });
+  const params = { incidentId: packet.incidentId, cmd: cmd.cmd, ref: cmd.ref, args: cmd.args };
+  // La consulta a la IA es asíncrona: ACK ahora, CMD_RESULT por el buzón cuando responda el modelo.
+  if (cmd.cmd === ASK_CMD) return startAsk(ctx, user, params, work);
+  executeCommand(ctx, user, params);
   return { ackCode: 0, ackText: 'Recibido' };
 }

@@ -5,27 +5,25 @@ import Anthropic from '@anthropic-ai/sdk';
 
 const SYSTEM = readFileSync(new URL('./prompts/alert-writer.txt', import.meta.url), 'utf8').trim();
 
-// Los textos de usuarios no pueden cerrar las etiquetas que delimitan el dato no confiable.
-const esc = (s) => String(s ?? '').replace(/[<>]/g, (c) => (c === '<' ? '‹' : '›'));
+/** Los textos de usuarios no pueden cerrar las etiquetas que delimitan el dato no confiable. */
+export function escapeTags(s) {
+  return String(s ?? '').replace(/[<>]/g, (c) => (c === '<' ? '‹' : '›'));
+}
 
 export function buildPrompt({ incident, contact, mapUrl, replyUrl, note, lang }) {
   const lines = [
     `<lang>${lang}</lang>`,
-    `<contact>${esc(contact.name)}${contact.relation ? ` (${esc(contact.relation)})` : ''}</contact>`,
+    `<contact>${escapeTags(contact.name)}${contact.relation ? ` (${escapeTags(contact.relation)})` : ''}</contact>`,
     `<category>${incident.categoryLabel}</category>`,
     `<severity>${incident.severity}/3</severity>`,
-    `<public_text>${esc(incident.public_text)}</public_text>`,
-    `<user_note>${esc(note)}</user_note>`,
+    `<public_text>${escapeTags(incident.public_text)}</public_text>`,
+    `<user_note>${escapeTags(note)}</user_note>`,
     `<map_url>${mapUrl ?? 'sin ubicación'}</map_url>`,
     `<reply_url>${replyUrl}</reply_url>`,
   ];
   return lines.join('\n');
 }
 
-/**
- * `writer(promptXml, fallbackText) -> Promise<string>`. Sin API key o ante cualquier error devuelve la
- * plantilla determinista, que es el camino probado; el LLM solo mejora la redacción.
- */
 /** Cliente de Anthropic: `baseUrl` permite un proxy; sin API key no hay cliente y se usa la plantilla. */
 export function buildClient(llm) {
   if (!llm.apiKey) return null;
@@ -33,7 +31,8 @@ export function buildClient(llm) {
   return new Anthropic(llm.baseUrl ? { ...options, baseURL: llm.baseUrl } : options);
 }
 
-function replyText(res) {
+/** Texto de la respuesta del modelo (solo bloques de texto; los de razonamiento se ignoran). */
+export function replyText(res) {
   return res.content.filter((b) => b.type === 'text').map((b) => b.text).join('').trim();
 }
 
@@ -41,6 +40,10 @@ function isUsable(text) {
   return text.length >= 10 && text.length <= 600;
 }
 
+/**
+ * `writer(promptXml, fallbackText) -> Promise<string>`. Sin API key o ante cualquier error devuelve la
+ * plantilla determinista, que es el camino probado; el LLM solo mejora la redacción.
+ */
 export function createMessageWriter(config, { client } = {}) {
   const apiClient = client ?? buildClient(config.llm);
   if (!apiClient) return async (_prompt, fallback) => fallback;

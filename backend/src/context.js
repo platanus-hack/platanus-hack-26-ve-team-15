@@ -8,12 +8,12 @@ import { seal } from './crypto.js';
 const MAX_PLAINTEXT = 312 - SEAL_OVERHEAD; // 264 B (contrato §2.1)
 const MAX_BODY_TEXT = MAX_PLAINTEXT - 3;
 
-export function createContext({ config, store, keys, channels, writer, now = () => Math.floor(Date.now() / 1000), log = console.log }) {
+export function createContext({ config, store, keys, channels, writer, asker = null, now = () => Math.floor(Date.now() / 1000), log = console.log }) {
   const bus = new EventEmitter();
   bus.setMaxListeners(200);
   const pending = new Set();
   const ctx = {
-    config, store, keys, channels, writer, now, log, bus, agentStarted: new Set(),
+    config, store, keys, channels, writer, asker, now, log, bus, agentStarted: new Set(),
     /** Trabajo posterior a la respuesta (agente, avisos). Nunca bloquea al egress. */
     defer(fn) {
       const p = Promise.resolve().then(fn).catch((e) => log(`[deferred] ${e.stack || e}`)).finally(() => pending.delete(p));

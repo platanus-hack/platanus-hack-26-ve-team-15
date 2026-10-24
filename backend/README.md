@@ -24,6 +24,7 @@ node scripts/post-vector.mjs     # prueba extremo a extremo contra el servidor l
 | `src/radio.js` | R5: `POST /v1/egress/presence`, `GET /v1/egress/inbox` (long-poll), selección por geohash |
 | `src/agent.js` | `registrar_incidente`, `avisar_contactos`, `consultar_alertas` y el plan del SOS (§7) |
 | `src/commands.js` | `CMD` → `CMD_RESULT`: mocks de pagos/rides tras feature flags, topes e idempotencia |
+| `src/ai.js` | `CMD preguntar_ia`: consulta a la IA desde un teléfono sin internet, asíncrona, un solo `CMD_RESULT` (contrato §7.1) |
 | `src/replies.js` | Respuestas de contactos → `MSG_IN` sellado al usuario |
 | `src/channels.js`, `src/llm.js` | SMS (Twilio), correo (Resend), voz (ElevenLabs), redactor con Claude |
 | `src/api.js` | Ensamblado de la app (contexto + servidor HTTP) |
@@ -80,7 +81,14 @@ CMD_MAX_PER_DAY=10
 CMD_MAX_AMOUNT_PER_DAY=500
 # Agente (redacción de avisos)
 ANTHROPIC_API_KEY=
+ANTHROPIC_BASE_URL=                   # solo si la clave es de un proxy o pasarela
 ANTHROPIC_MODEL=claude-opus-5-5
+# Consultas a la IA desde el mesh (CMD preguntar_ia, contrato §7.1)
+FEATURE_ASK_AI=false
+ANTHROPIC_ASK_MODEL=claude-haiku-5-5
+ASK_TIMEOUT_MS=15000                  # pasado este tiempo, CMD_RESULT status 2
+ASK_MAX_PER_DAY=20                    # por usuario, cuentan también las consultas en curso
+ASK_MAX_CONCURRENT=4                  # simultáneas en el servidor; más → status 1 «ocupada»
 # WhatsApp por Kapso (el bit «sms» del contrato se entrega por aquí si está configurado)
 KAPSO_API_KEY=
 KAPSO_PHONE_NUMBER_ID=                # phone_number_id del número de WhatsApp en Kapso
@@ -117,6 +125,19 @@ Los vectores congelados tienen `timestamp` de 2026-12-25: sin `BALIZA_NOW` el se
 como debe. Sus `sealed_blob` son relleno (no abren): el servidor igual acepta y devuelve ACK, y al no poder
 leer contactos/canales usa el fallback «todos los contactos, SMS» y registra el evento `blob_unreadable`.
 El dev A debe sellar de verdad con `crypto_box_seal` a `server.seal_pk_b64` (lo devuelve `POST /v1/users`).
+
+## Consultar a la IA sin internet (`preguntar_ia`)
+
+El teléfono envía un `CMD` `{"cmd":"preguntar_ia","ref":N,"args":{"q":"…"}}` (pregunta ≤ 200 caracteres y
+≤ 210 B). El egress recibe ACK código 2 al momento; el backend consulta a `claude-haiku-5-5` fuera de la
+petición y deja **un** `CMD_RESULT` (≤ 250 B, recortado por frase) en el buzón. Errores, tiempo agotado o
+un reinicio a mitad → `status 2`; rechazos → `status 1`; bandera apagada o sin API key → `status 3`.
+No se guarda el texto de preguntas ni respuestas (tabla `ask_jobs`: solo metadatos). Detalle: `contrato.md` §7.1.
+
+```bash
+node --env-file=../.env scripts/ask-smoke.mjs "¿Qué hago ante una quemadura?"   # el modelo real, sin mesh
+node scripts/ask-vector.mjs --url http://localhost:8080 --q "¿Cómo hago un torniquete?"  # un teléfono emulado, de punta a punta
+```
 
 ## Rutas fuera del contrato (extensiones del backend)
 

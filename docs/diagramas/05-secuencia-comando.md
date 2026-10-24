@@ -49,6 +49,7 @@ sequenceDiagram
 | `cmd` | Bandera | Cuenta para el tope | Resultado |
 |-------|---------|---------------------|-----------|
 | `consultar_alertas` | ninguna | no (pero suma si sale bien) | Hasta 3 incidentes abiertos cercanos, de la base real |
+| `preguntar_ia` | `FEATURE_ASK_AI` | no (tope propio: 20 por 24 h) | Respuesta real de la IA (≤ 250 B), **asíncrona**: ver abajo |
 | `recargar_saldo` | `FEATURE_PAYMENTS` | sí, y monto | `[MOCK] Recarga simulada …` |
 | `pagar` | `FEATURE_PAYMENTS` | sí, y monto | `[MOCK] Pago simulado …` |
 | `pedir_ride` | `FEATURE_RIDES` | sí | `[MOCK] Ride simulado …, llega en 4–11 min` |
@@ -72,3 +73,35 @@ por usuario en 24 h: `CMD_MAX_PER_DAY = 10` comandos con `status = 0` y `CMD_MAX
   `CMD_RESULT` ya está en el buzón cuando el egress recibe la respuesta.
 - **CMD fuera de un incidente.** El paquete exige `incident_id`. Para el demo, el CMD va dentro del
   incidente activo (como el ejemplo de §8); `consultar_alertas` usa su ubicación si no trae `lat` y `lon`.
+
+## `preguntar_ia`: la excepción asíncrona
+
+A diferencia de los mocks, la consulta a la IA **no** se resuelve dentro de la petición del egress:
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant A as A · origen
+  participant C as C · egress
+  participant API as Backend<br/>egress.js → ai.js
+  participant LLM as Claude Haiku 5.5
+  participant MB as Buzón
+
+  A-)C: CMD {"cmd":"preguntar_ia","ref":9,"args":{"q":"…"}} (sellado)
+  C->>API: POST /v1/egress
+  alt bandera apagada · pregunta vacía o larga · tope · saturado
+    API->>MB: CMD_RESULT status 1 o 3 (al momento)
+    API-->>C: ACK código 0
+  else aceptada
+    API-->>C: ACK código 2 «Recibido. Consultando a la IA»
+    API->>LLM: pregunta delimitada + categoría y gravedad (sin herramientas)
+    LLM-->>API: texto (≤ 15 s; si no, status 2)
+    API->>MB: CMD_RESULT ref=9 status 0, ≤ 250 B, sellado al usuario
+  end
+  C->>MB: POST /v1/mailbox/poll (o inbox R5)
+  MB-->>C: CMD_RESULT
+  C-)A: inyecta al mesh
+```
+
+Detalle y límites: `contrato.md` §7.1. El servidor solo guarda metadatos de la consulta (`ask_jobs`), nunca el texto.
+

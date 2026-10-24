@@ -1,4 +1,5 @@
 // Ensamblado de la aplicación: contexto (config, store, llaves, canales) + rutas HTTP.
+import { createAsker, recoverPendingAsks } from './ai.js';
 import { buildChannels } from './channels.js';
 import { loadConfig } from './config.js';
 import { createContext } from './context.js';
@@ -17,7 +18,7 @@ function resolveClock(env, now) {
   return env.BALIZA_NOW ? () => Number(env.BALIZA_NOW) : undefined;
 }
 
-function buildContext({ env, config, store, keys, channels, writer, now, log }) {
+function buildContext({ env, config, store, keys, channels, writer, asker, now, log }) {
   const theStore = store ?? new Store(config.dbPath);
   const clock = resolveClock(env, now);
   return createContext({
@@ -25,12 +26,14 @@ function buildContext({ env, config, store, keys, channels, writer, now, log }) 
     keys: keys ?? loadServerKeys({ env, keyFile: config.keyFile }),
     channels: channels ?? buildChannels(config, { log, store: theStore, now: clock }),
     writer: writer ?? createMessageWriter(config),
+    asker: asker ?? createAsker(config),
   });
 }
 
 export function createApp({ env = process.env, config = loadConfig(env), log = console.log, ...deps } = {}) {
   const ctx = buildContext({ env, config, log, ...deps });
   ctx.onMailbox = (m) => pushToRadio(ctx, m);
+  recoverPendingAsks(ctx);
   const app = { ctx, config, limiter: createRateLimiter(ctx.now), alreadySeen: createWebhookDeduper() };
   const server = createHttpServer(allRoutes(app), { corsOrigin: config.corsOrigin, log });
   return { ctx, server, close: () => { server.close(); ctx.store.close(); } };

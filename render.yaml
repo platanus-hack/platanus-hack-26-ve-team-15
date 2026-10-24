@@ -32,6 +32,11 @@ services:
         value: "false"
       - key: FEATURE_RIDES
         value: "false"
+      # Consultas a la IA desde el mesh (CMD preguntar_ia). Necesita ANTHROPIC_API_KEY.
+      - key: FEATURE_ASK_AI
+        value: "true"
+      - key: ANTHROPIC_ASK_MODEL
+        value: claude-haiku-5-5
       # Seguridad
       - key: ADMIN_TOKEN
         sync: false
@@ -39,6 +44,9 @@ services:
         sync: false
       # Agente (redacción de avisos con Claude; sin clave se usa la plantilla)
       - key: ANTHROPIC_API_KEY
+        sync: false
+      # Solo si la clave es de un proxy o pasarela (p. ej. claves sk-ant-usr-…)
+      - key: ANTHROPIC_BASE_URL
         sync: false
       # WhatsApp por Kapso
       - key: KAPSO_API_KEY
