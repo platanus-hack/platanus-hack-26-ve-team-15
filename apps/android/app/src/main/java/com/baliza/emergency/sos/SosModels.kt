@@ -89,5 +89,7 @@ class RetrySchedule(
     val fastWindowMs: Long = 120_000,
     val slowIntervalMs: Long = 60_000,
     val giveUpAfterMs: Long = 30 * 60_000,
-    val unconfirmedAfterMs: Long = 30_000
+    val unconfirmedAfterMs: Long = 30_000,
+    /** Wait after a new neighbor appears before writing, so its link can finish connecting. */
+    val neighborSettleMs: Long = 1_000
 )

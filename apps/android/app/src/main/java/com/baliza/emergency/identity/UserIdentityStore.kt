@@ -3,8 +3,6 @@ package com.baliza.emergency.identity
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import com.baliza.emergency.crypto.Ed25519
 import com.baliza.emergency.crypto.SealedBox
 import java.util.Base64
@@ -84,20 +82,8 @@ class UserIdentityStore private constructor(private val prefs: SharedPreferences
         private const val KEY_SERVER_SIGN = "server_sign_public"
         private const val KEY_SERVER_SEAL = "server_seal_public"
 
-        fun create(context: Context): UserIdentityStore {
-            val masterKey = MasterKey.Builder(context, MasterKey.DEFAULT_MASTER_KEY_ALIAS)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-            return UserIdentityStore(
-                EncryptedSharedPreferences.create(
-                    context,
-                    PREFS_NAME,
-                    masterKey,
-                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-                )
-            )
-        }
+        fun create(context: Context): UserIdentityStore =
+            UserIdentityStore(SecurePrefs.create(context, PREFS_NAME))
 
         /** Test-only: plain preferences are not encrypted. */
         internal fun forTesting(prefs: SharedPreferences) = UserIdentityStore(prefs)

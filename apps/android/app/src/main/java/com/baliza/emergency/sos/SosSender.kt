@@ -14,11 +14,11 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -44,7 +44,8 @@ class SosSender(
     private val serverKeys: () -> ServerKeys?,
     private val scope: CoroutineScope,
     /** Emits when a new neighbor appears: restarts the retry schedule, even after giving up. */
-    private val newNeighbors: Flow<Unit> = emptyFlow(),
+    private val newNeighbors: Flow<Unit> = transport.newNeighbors,
+    private val store: IncidentStore = NoIncidentStore,
     private val nowMillis: () -> Long = System::currentTimeMillis,
     private val random: SecureRandom = SecureRandom(),
     private val schedule: RetrySchedule = RetrySchedule()
@@ -73,17 +74,50 @@ class SosSender(
         }
 
         val current = Incident(id, packet.seq, wire, nowMillis())
+        store.save(IncidentRecord(id, current.seq, wire, ackState = null))
+        begin(current, ackState = null)
+        return StartResult.Started(hex(id))
+    }
+
+    /**
+     * Picks up the incident saved by a previous run (call it when the app or its service starts).
+     * Unacknowledged incidents resume resending with a fresh retry window; acknowledged ones only
+     * listen for further ACKs. A record that does not check out is discarded.
+     *
+     * @return true if an incident was resumed.
+     */
+    fun resume(): Boolean {
+        if (incident != null) return false
+        val record = store.load() ?: return false
+        if (!matchesUs(record)) {
+            store.clear()
+            return false
+        }
+        begin(Incident(record.incidentId, record.seq, record.wire, nowMillis()), record.ackState)
+        return true
+    }
+
+    /** The saved packet must be ours: our key, our sender id, the id it was saved under. */
+    private fun matchesUs(record: IncidentRecord): Boolean {
+        val packet = EmergencyCodec.decodeOrNull(record.wire) ?: return false
+        return packet.type == EmergencyType.SOS &&
+            packet.seq == record.seq &&
+            packet.incidentId.contentEquals(record.incidentId) &&
+            packet.senderId.contentEquals(identity.senderId) &&
+            EmergencyCodec.verify(packet, identity.signPublicKey)
+    }
+
+    private fun begin(current: Incident, ackState: SosState?) {
         incident = current
-        _status.value = SosStatus(SosState.UNSENT, hex(id), current.seq, attempts = 0)
+        _status.value = SosStatus(ackState ?: SosState.UNSENT, hex(current.id), current.seq, attempts = 0)
         listeners = listOf(
             scope.launch { transport.incoming.collect(::onReceived) },
             scope.launch { newNeighbors.collect { restart.trySend(Unit) } }
         )
-        retryJobs = listOf(
+        retryJobs = if (ackState != null) emptyList() else listOf(
             scope.launch { markUnconfirmedLater(current) },
             scope.launch { retryLoop(current) }
         )
-        return StartResult.Started(hex(id))
     }
 
     /** Stops resending. Does not tell the server; closing an incident is a separate UPDATE (R6). */
@@ -92,6 +126,7 @@ class SosSender(
         listeners = emptyList()
         retryJobs = emptyList()
         incident = null
+        store.clear()
         _status.value = SosStatus(SosState.IDLE)
     }
 
@@ -156,7 +191,7 @@ class SosSender(
     }
 
     private suspend fun markUnconfirmedLater(current: Incident) {
-        kotlinx.coroutines.delay(schedule.unconfirmedAfterMs)
+        delay(schedule.unconfirmedAfterMs)
         _status.update { s -> if (s.state == SosState.SENT) SosStatus(SosState.UNCONFIRMED, s.incidentIdHex, s.seq, s.attempts) else s }
     }
 
@@ -169,13 +204,17 @@ class SosSender(
             if (elapsed >= schedule.giveUpAfterMs) {
                 _status.update { s -> if (isAckState(s.state)) s else SosStatus(SosState.STOPPED, s.incidentIdHex, s.seq, s.attempts) }
                 restart.receive() // wait for a neighbor
+                delay(schedule.neighborSettleMs)
                 windowStart = nowMillis()
                 sendOnce(current)
                 continue
             }
             val interval = if (elapsed < schedule.fastWindowMs) schedule.fastIntervalMs else schedule.slowIntervalMs
             val neighbor = withTimeoutOrNull(interval) { restart.receive() }
-            if (neighbor != null) windowStart = nowMillis()
+            if (neighbor != null) {
+                delay(schedule.neighborSettleMs) // let the new link finish connecting before writing
+                windowStart = nowMillis()
+            }
             sendOnce(current)
         }
     }
@@ -208,6 +247,7 @@ class SosSender(
             }
         }
         // Acknowledged: no more resending. Keep listening for later ACKs of the same incident.
+        store.save(IncidentRecord(current.id, current.seq, current.wire, _status.value.state.takeIf(::isAckState)))
         retryJobs.forEach(Job::cancel)
     }
 

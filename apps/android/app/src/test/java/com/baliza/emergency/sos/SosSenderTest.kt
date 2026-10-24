@@ -39,6 +39,7 @@ class SosSenderTest {
         var result = SendResult.SENT
         private val flow = MutableSharedFlow<ReceivedEmergencyPacket>(extraBufferCapacity = 16)
         override val incoming = flow
+        override val newNeighbors = kotlinx.coroutines.flow.emptyFlow<Unit>()
         override suspend fun send(payload: ByteArray, ttl: Int): SendResult {
             sent += payload.copyOf(); sentAt += clock()
             return result
@@ -61,7 +62,7 @@ class SosSenderTest {
         val clock = { epochMs + currentTime }
         val transport = FakeTransport(clock)
         val neighbors = MutableSharedFlow<Unit>(extraBufferCapacity = 4)
-        val sender = SosSender(transport, identity, { keys }, backgroundScope, neighbors, clock, schedule = schedule)
+        val sender = SosSender(transport, identity, { keys }, backgroundScope, neighbors, nowMillis = clock, schedule = schedule)
         return Rig(sender, transport, neighbors)
     }
 
@@ -191,6 +192,7 @@ class SosSenderTest {
         assertEquals("nothing is sent while stopped", sentWhenStopped, r.transport.sent.size)
 
         r.neighbors.tryEmit(Unit); runCurrent()
+        advanceTimeBy(1_000); runCurrent() // settle time of the new link
         assertEquals(sentWhenStopped + 1, r.transport.sent.size)
         assertEquals(SosState.UNCONFIRMED, r.sender.status.value.state)
 
@@ -201,12 +203,13 @@ class SosSenderTest {
     }
 
     @Test
-    fun `a new neighbor mid-schedule sends immediately and restarts the window`() = runTest {
+    fun `a new neighbor mid-schedule sends after the settle time and restarts the window`() = runTest {
         val r = rig()
         r.sender.start(request)
         advanceTimeBy(7_000); runCurrent()
         assertEquals(1, r.transport.sent.size)
         r.neighbors.tryEmit(Unit); runCurrent()
+        advanceTimeBy(1_000); runCurrent() // settle time of the new link
         assertEquals(2, r.transport.sent.size)
         advanceTimeBy(14_000); runCurrent()
         assertEquals(2, r.transport.sent.size)

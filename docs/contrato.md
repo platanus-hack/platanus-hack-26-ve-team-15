@@ -244,7 +244,7 @@ Los nodos intermedios (B) no guardan paquetes de otros; esa "custodia" queda fue
 - El teléfono que emite un SOS, UPDATE, MSG_OUT o CMD lo reenvía hasta recibir el ACK
   correspondiente a su `seq`.
 - Intervalo: cada 15 s durante los primeros 2 min; después cada 60 s. Tope: 30 min sin ACK, y
-  vuelve a empezar al detectar un vecino nuevo.
+  vuelve a empezar al detectar un vecino nuevo (se espera 1 s a que el enlace termine de conectar).
 - El paquete interno se reenvía **idéntico** (mismo `seq`, misma firma). El sobre de bitchat sí debe
   ser nuevo en cada intento. Verificado: el ID de duplicado es `SHA-256(tipo | sender | timestamp en ms
   del sobre | payload)` (`PacketIdUtil`), así que basta con un `timestamp` distinto; dos envíos en el
@@ -284,7 +284,7 @@ Los nodos intermedios (B) no guardan paquetes de otros; esa "custodia" queda fue
 | `detenido` | Se agotó el tope de reintentos sin ACK; reintenta si aparece un vecino. |
 
 Un ACK nunca retrocede el estado (puede llegar desordenado): `recibido` < `en_gestion` < `contactos_avisados`; `rechazado` es final. Solo cuenta un ACK firmado por el servidor, del mismo `incident_id`, con `seq` ≥ el enviado.
-El incidente vive en memoria: si el proceso muere, los reintentos se detienen (pendiente: persistirlo).
+El incidente se guarda cifrado en el teléfono (paquete firmado tal cual y último ACK). Si Android mata el proceso, al reabrir la app o su servicio se reanuda con una ventana de reintentos nueva y el mismo paquete; si ya tenía ACK, solo escucha los siguientes. Un registro que no sea del usuario o esté dañado se descarta.
 
 La UI **nunca** muestra "entregado" ni "avisados" sin ACK. Las respuestas MSG_IN y CMD_RESULT llegan
 por el mismo mecanismo (R2) y el teléfono no confirma su recepción: el buzón las conserva 24 h.
