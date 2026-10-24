@@ -32,10 +32,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,15 +48,11 @@ import com.baliza.emergency.sos.SosSender
 import com.baliza.emergency.sos.SosState
 import com.baliza.emergency.sos.SosStatus
 
-private val intListSaver = listSaver<androidx.compose.runtime.snapshots.SnapshotStateList<Int>, Int>(
-    save = { it.toList() },
-    restore = { it.toMutableStateList() }
-)
-
 /** The main screen: pick what happened, hold the button, watch the honest status. */
 @Composable
 fun SosScreen(
     profile: ContactProfile,
+    form: SosFormState,
     status: SosStatus,
     error: String?,
     onStart: (category: Int, severity: Int, publicText: String, note: String, contacts: Set<Int>) -> Unit,
@@ -66,11 +60,6 @@ fun SosScreen(
     onDismissError: () -> Unit,
     header: @Composable () -> Unit = {}
 ) {
-    var category by rememberSaveable { mutableStateOf(1) }
-    var severity by rememberSaveable { mutableStateOf(3) }
-    var publicText by rememberSaveable { mutableStateOf("") }
-    var note by rememberSaveable { mutableStateOf("") }
-    val selected = rememberSaveable(saver = intListSaver) { profile.contacts.map { it.index }.toMutableStateList() }
     var confirmCancel by rememberSaveable { mutableStateOf(false) }
     val active = SosLabels.active(status.state)
 
@@ -87,37 +76,37 @@ fun SosScreen(
             Text("¿Qué pasa?", style = MaterialTheme.typography.titleMedium)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(SosLabels.categories) { (id, label) ->
-                    FilterChip(selected = category == id, onClick = { category = id }, label = { Text(label) })
+                    FilterChip(selected = form.category == id, onClick = { form.category = id }, label = { Text(label) })
                 }
             }
             Text("Gravedad", style = MaterialTheme.typography.titleMedium)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 for ((id, label) in SosLabels.severities) {
-                    FilterChip(selected = severity == id, onClick = { severity = id }, label = { Text(label) })
+                    FilterChip(selected = form.severity == id, onClick = { form.severity = id }, label = { Text(label) })
                 }
             }
             Text("A quién avisar", style = MaterialTheme.typography.titleMedium)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(profile.contacts) { c ->
                     FilterChip(
-                        selected = c.index in selected,
-                        onClick = { if (c.index in selected) selected.remove(c.index) else selected.add(c.index) },
+                        selected = c.index in form.selected,
+                        onClick = { form.toggle(c.index) },
                         label = { Text(c.name) }
                     )
                 }
             }
             OutlinedTextField(
-                value = publicText,
-                onValueChange = { if (it.toByteArray(Charsets.UTF_8).size <= 60) publicText = it },
+                value = form.publicText,
+                onValueChange = { if (it.toByteArray(Charsets.UTF_8).size <= 60) form.publicText = it },
                 label = { Text("Mensaje corto (lo ve cualquiera en la red)") },
-                supportingText = { Text("${publicText.toByteArray(Charsets.UTF_8).size}/60") },
+                supportingText = { Text("${form.publicText.toByteArray(Charsets.UTF_8).size}/60") },
                 modifier = Modifier.fillMaxWidth()
             )
             OutlinedTextField(
-                value = note,
-                onValueChange = { if (it.toByteArray(Charsets.UTF_8).size <= SosSender.MAX_NOTE_BYTES) note = it },
+                value = form.note,
+                onValueChange = { if (it.toByteArray(Charsets.UTF_8).size <= SosSender.MAX_NOTE_BYTES) form.note = it },
                 label = { Text("Detalles para tus contactos (cifrado)") },
-                supportingText = { Text("${note.toByteArray(Charsets.UTF_8).size}/${SosSender.MAX_NOTE_BYTES}") },
+                supportingText = { Text("${form.note.toByteArray(Charsets.UTF_8).size}/${SosSender.MAX_NOTE_BYTES}") },
                 modifier = Modifier.fillMaxWidth()
             )
             if (error != null) {
@@ -128,11 +117,11 @@ fun SosScreen(
             }
             Spacer(Modifier.height(8.dp))
             SosButton(
-                enabled = selected.isNotEmpty(),
-                onTriggered = { onStart(category, severity, publicText, note, selected.toSet()) }
+                enabled = form.selected.isNotEmpty(),
+                onTriggered = { onStart(form.category, form.severity, form.publicText, form.note, form.selected.toSet()) }
             )
             Text(
-                if (selected.isEmpty()) "Elige a quién avisar." else "Mantén pulsado para pedir ayuda.",
+                if (form.selected.isEmpty()) "Elige a quién avisar." else "Mantén pulsado para pedir ayuda.",
                 modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

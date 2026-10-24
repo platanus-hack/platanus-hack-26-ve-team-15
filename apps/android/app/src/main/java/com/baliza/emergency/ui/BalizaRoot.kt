@@ -12,6 +12,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +50,10 @@ private fun ReadyContent(vm: BalizaViewModel, engine: EmergencyApp.Engine, onOpe
     val registration by vm.registration.collectAsState()
     val sosError by vm.sosError.collectAsState()
     var showDebug by rememberSaveable { mutableStateOf(false) }
+    // Held here, above the debug/SOS switch, so visiting the debug panel does not reset the choices.
+    val form = rememberSaveable(saver = SosFormState.Saver) { SosFormState() }
+    val current = profile
+    LaunchedEffect(current?.contacts?.map { it.index }) { current?.let { form.reconcile(it.contacts.map { c -> c.index }) } }
     val debug = com.bitchat.android.BuildConfig.DEBUG
 
     if (debug && showDebug) {
@@ -62,7 +67,6 @@ private fun ReadyContent(vm: BalizaViewModel, engine: EmergencyApp.Engine, onOpe
         }
     }
 
-    val current = profile
     if (!registered || current == null) {
         RegistrationScreen(
             initial = current,
@@ -74,6 +78,7 @@ private fun ReadyContent(vm: BalizaViewModel, engine: EmergencyApp.Engine, onOpe
     } else {
         SosScreen(
             profile = current,
+            form = form,
             status = status,
             error = sosError,
             onStart = { category, severity, text, note, contacts -> vm.startSos(engine, category, severity, text, note, contacts) },

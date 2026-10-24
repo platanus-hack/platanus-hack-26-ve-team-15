@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.baliza.emergency.app.EmergencyApp
 import com.baliza.emergency.app.HeardPacket
+import com.baliza.emergency.app.SosLabels
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -36,6 +37,7 @@ import java.util.Locale
 fun DebugScreen(vm: BalizaViewModel, engine: EmergencyApp.Engine, onBack: () -> Unit, onOpenBitchat: () -> Unit) {
     val heard by engine.heard.collectAsState()
     val status by engine.sosStatus.collectAsState()
+    val test by engine.testStatus.collectAsState()
     var url by rememberSaveable { mutableStateOf(vm.settings.baseUrl) }
     var urlMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
@@ -68,6 +70,7 @@ fun DebugScreen(vm: BalizaViewModel, engine: EmergencyApp.Engine, onBack: () -> 
             Button(onClick = { vm.sendTestPacket(engine) }) { Text("Enviar prueba") }
             OutlinedButton(onClick = { engine.stopTestPacket() }) { Text("Detener") }
         }
+        Text(SosLabels.testLine(test.state, test.attempts), style = MaterialTheme.typography.bodyMedium)
         Text("SOS real: ${status.state} · intentos ${status.attempts}", style = MaterialTheme.typography.bodySmall)
 
         Text("Paquetes oídos (${heard.size})", style = MaterialTheme.typography.titleMedium)
