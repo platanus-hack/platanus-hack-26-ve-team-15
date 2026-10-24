@@ -7,10 +7,10 @@ protocolo y las APIs ya están definidos: **no los reinventes, impleméntalos**.
 
 | Rol | Persona | Carpeta principal |
 |-----|---------|-------------------|
-| **Dev A: Android/Mesh** | _______________ | `apps/android/` |
-| **Dev B: Backend, Agente y Panel** | _______________ | `backend/`, `dashboard/` |
+| **Dev A: Android/Mesh** | Gregory | `apps/android/` |
+| **Dev B: Backend, Agente y Panel** | Alejandro | `backend/`, `dashboard/` |
 
-(Completen los nombres al empezar. Si prefieren intercambiar roles, no cambia nada más.)
+(Si prefieren intercambiar roles, no cambia nada más: solo actualicen esta tabla.)
 
 ## Qué estamos construyendo (30 segundos)
 
