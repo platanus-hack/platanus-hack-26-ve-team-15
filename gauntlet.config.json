@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "name": "platanus-hack-26-ve-team-15",
+  "version": "1.0.0",
+  "tech": "node",
+  "testCommand": "npm test",
+  "sourceDirs": [
+    "src"
+  ],
+  "coverage": {
+    "engine": "auto",
+    "lcovPaths": [
+      "coverage/lcov.info",
+      "build/coverage/lcov.info"
+    ],
+    "v8Dir": ".v8-coverage"
+  },
+  "crap": {
+    "threshold": 8,
+    "excludeDirs": [
+      "scripts/gauntlet",
+      "node_modules",
+      "dist",
+      "build",
+      ".dart_tool",
+      "target",
+      ".venv"
+    ]
+  },
+  "mutation": {
+    "maxMutants": 20,
+    "excludeDirs": [
+      "scripts/gauntlet",
+      "node_modules",
+      "dist",
+      "build",
+      ".dart_tool",
+      "target",
+      ".venv"
+    ]
+  }
+}

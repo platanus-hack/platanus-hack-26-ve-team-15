@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "model": "sonnet",
+  "advisorModel": "opus",
+  "alwaysThinkingEnabled": true,
+  "modelSettings": {
+    "sonnet": {
+      "effortLevel": "high"
+    },
+    "opus": {
+      "effortLevel": "high"
+    },
+    "haiku": {
+      "effortLevel": "low"
+    }
+  },
+  "sandbox": {
+    "enabled": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(node scripts/*)",
+      "Bash(git status)",
+      "Bash(git diff)",
+      "Bash(git log *)",
+      "Read",
+      "Glob",
+      "Grep"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)",
+      "Read(~/.ssh/**)",
+      "Read(~/.aws/**)",
+      "Edit(**/settings.json)",
+      "Edit(./.env)",
+      "Edit(./.env.*)",
+      "Bash(rm -rf /)",
+      "Bash(rm -rf /*)",
+      "Bash(del /s /q C:\\*)",
+      "Bash(git push -f *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["scripts/jev-router.js", "hook", "PreToolUse"]
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["scripts/jev-router.js", "hook", "PreToolUse"]
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["scripts/jev-router.js", "hook", "PostToolUseFailure"]
+          }
+        ]
+      }
+    ]
+  }
+}
