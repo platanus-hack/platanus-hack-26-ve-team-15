@@ -27,7 +27,14 @@ export function buildPrompt({ incident, contact, mapUrl, replyUrl, note, lang })
  * plantilla determinista, que es el camino probado; el LLM solo mejora la redacción.
  */
 export function createMessageWriter(config, { client } = {}) {
-  const apiClient = client ?? (config.llm.apiKey ? new Anthropic({ apiKey: config.llm.apiKey, timeout: config.llm.timeoutMs, maxRetries: 0 }) : null);
+  const apiClient = client ?? (config.llm.apiKey
+    ? new Anthropic({
+      apiKey: config.llm.apiKey,
+      ...(config.llm.baseUrl ? { baseURL: config.llm.baseUrl } : {}),
+      timeout: config.llm.timeoutMs,
+      maxRetries: 0,
+    })
+    : null);
   if (!apiClient) return async (_prompt, fallback) => fallback;
   return async (prompt, fallback) => {
     try {
