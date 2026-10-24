@@ -18,9 +18,11 @@ const cfg = {
   api: (params.get('api') || stored.api || window.BALIZA_CONFIG?.api || '').replace(/\/$/, ''),
   token: params.get('token') || stored.token || '',
   admin: stored.admin || '',
+  mapProvider: params.get('map') || stored.mapProvider || 'esri',
+  cartoKey: params.get('cartoKey') || stored.cartoKey || '',
 };
 
-const state = { incidents: [], filter: 'open', selected: null, detail: null, features: null, markers: new Map(), es: null, ready: false };
+const state = { incidents: [], filter: 'open', mode: 'demo', selected: null, detail: null, features: null, markers: new Map(), tracks: new Map(), es: null, ready: false };
 
 // --- utilidades DOM ------------------------------------------------------------------------------
 
@@ -140,8 +142,18 @@ async function loadDetail() {
 
 // --- render ---------------------------------------------------------------------------------------
 
+function isDemoIncident(i) {
+  const d = (i.display_name || '').toLowerCase();
+  const p = (i.public_text || '').toLowerCase();
+  const e = (i.egress_id || '').toLowerCase();
+  return d.includes('demo') || d.includes('movimiento') || p.includes('sos inicial') || p.includes('sigo aqui') || e.includes('post-vector') || e.includes('chacao');
+}
+
 function visible() {
-  return state.incidents.filter((i) => state.filter === 'all' || i.status === 'open');
+  return state.incidents.filter((i) => {
+    if (state.mode === 'real' && isDemoIncident(i)) return false;
+    return state.filter === 'all' || i.status === 'open';
+  });
 }
 
 function render() {
@@ -192,9 +204,38 @@ function renderList() {
 // --- mapa -----------------------------------------------------------------------------------------
 
 const map = L.map('map', { zoomControl: true, attributionControl: true }).setView([10.4806, -66.9036], 12);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-  maxZoom: 19, subdomains: 'abcd', attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-}).addTo(map);
+
+let baseLayers = [];
+function setBaseLayer(provider, cartoKey) {
+  for (const l of baseLayers) map.removeLayer(l);
+  baseLayers = [];
+  if (provider === 'carto') {
+    const keyParam = cartoKey ? `?api_key=${encodeURIComponent(cartoKey)}` : '';
+    const layer = L.tileLayer(`https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png${keyParam}`, {
+      maxZoom: 19, subdomains: 'abcd', attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    });
+    layer.addTo(map);
+    baseLayers.push(layer);
+  } else if (provider === 'osm') {
+    const layer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, attribution: '&copy; OpenStreetMap contributors',
+    });
+    layer.addTo(map);
+    baseLayers.push(layer);
+  } else {
+    // Esri Dark Canvas: Gratuito, sin marca de agua, alto contraste y rendimiento
+    const base = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 16, attribution: '&copy; Esri, HERE, Garmin &copy; OpenStreetMap',
+    });
+    const ref = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 16,
+    });
+    base.addTo(map);
+    ref.addTo(map);
+    baseLayers.push(base, ref);
+  }
+}
+setBaseLayer(cfg.mapProvider, cfg.cartoKey);
 
 function pinIcon(i, selected) {
   const open = i.status === 'open';
@@ -210,20 +251,59 @@ function renderMap() {
     const k = keyOf(i);
     seen.add(k);
     const selected = state.selected && k === `${state.selected.sender_id}:${state.selected.incident_id}`;
+
+    // Rastro de movimiento en tiempo real (breadcrumb trail)
+    let track = state.tracks.get(k);
+    if (!track) {
+      track = { pts: [[i.lat, i.lon]], line: null };
+      state.tracks.set(k, track);
+    } else {
+      const last = track.pts[track.pts.length - 1];
+      if (Math.abs(last[0] - i.lat) > 0.00005 || Math.abs(last[1] - i.lon) > 0.00005) {
+        track.pts.push([i.lat, i.lon]);
+        if (track.pts.length > 50) track.pts.shift();
+      }
+    }
+
+    if (track.pts.length > 1) {
+      if (!track.line) {
+        track.line = L.polyline(track.pts, { color: '#06b6d4', weight: 3, opacity: 0.85, dashArray: '6 6' }).addTo(map);
+      } else {
+        track.line.setLatLngs(track.pts);
+      }
+    }
+
     let m = state.markers.get(k);
     if (!m) {
-      m = { pin: L.marker([i.lat, i.lon], { icon: pinIcon(i, selected) }).addTo(map), ring: L.circle([i.lat, i.lon], { radius: i.accuracy_m || 1, color: '#06b6d4', weight: 1, dashArray: '4 4', fillOpacity: 0.06 }).addTo(map) };
+      m = {
+        pin: L.marker([i.lat, i.lon], { icon: pinIcon(i, selected) }).addTo(map),
+        ring: L.circle([i.lat, i.lon], { radius: i.accuracy_m || 1, color: '#06b6d4', weight: 1, dashArray: '4 4', fillOpacity: 0.06 }).addTo(map),
+      };
       m.pin.on('click', () => select(i));
       state.markers.set(k, m);
     } else {
+      const curPos = m.pin.getLatLng();
+      const moved = Math.abs(curPos.lat - i.lat) > 0.00005 || Math.abs(curPos.lng - i.lon) > 0.00005;
       m.pin.setLatLng([i.lat, i.lon]).setIcon(pinIcon(i, selected));
       m.ring.setLatLng([i.lat, i.lon]).setRadius(i.accuracy_m || 1);
+      if (moved && selected) {
+        map.panTo([i.lat, i.lon], { animate: true, duration: 0.8 });
+      }
     }
     m.pin.bindTooltip(h('span', {}, `${i.display_name ?? 'Usuario'} · ${i.category_label}`), { direction: 'top', offset: [0, -10] });
   }
+
   for (const [k, m] of state.markers) {
-    if (!seen.has(k)) { m.pin.remove(); m.ring.remove(); state.markers.delete(k); }
+    if (!seen.has(k)) {
+      m.pin.remove();
+      m.ring.remove();
+      state.markers.delete(k);
+      const track = state.tracks.get(k);
+      if (track?.line) track.line.remove();
+      state.tracks.delete(k);
+    }
   }
+
   if (first && seen.size) {
     const pts = visible().filter((i) => i.lat !== null).map((i) => [i.lat, i.lon]);
     if (pts.length) map.fitBounds(pts, { padding: [60, 60], maxZoom: 15 });
@@ -317,12 +397,22 @@ function renderDetail() {
             h('td', {}, cfg.admin && n.state === 'skipped_unverified' && h('button', { class: 'btn', type: 'button',
               onclick: () => adminPost('/v1/admin/contacts/verify', { sender_id: i.sender_id, index: n.contact_idx }, 'Contacto verificado') }, 'Verificar'))))))
         : h('p', { class: 'hint', style: 'color:var(--muted)' }, 'Aún no se avisó a nadie.'),
+      h('div', { style: 'margin-top: 10px; display: flex; flex-direction: column; gap: 6px;' },
+        h('button', {
+          class: 'btn primary',
+          style: 'width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; font-size: 13px;',
+          type: 'button',
+          onclick: () => showQrModal(d)
+        }, '📱 Ver Opciones / QR para el Jurado')),
       cfg.admin && d.notifications.length > 0 && replyForm(i, d.notifications[0].contact_idx)),
 
-    h('div', { class: 'sec' }, h('h3', {}, 'Comandos (Fases 4 y 5, simulados)'),
+    h('div', { class: 'sec' }, h('h3', {}, 'Comandos (Fases 4 y 5, Yummy & Pagos)'),
       commands.length
         ? commands.map((e) => h('div', { class: 'mock' }, `[MOCK] ${e.data.cmd} · ref ${e.data.ref} · ${CMD_STATUS[e.data.status] ?? e.data.status}`))
-        : h('p', { class: 'hint', style: 'color:var(--muted)' }, 'Sin comandos. Los pagos, recargas y rides son siempre simulados.')),
+        : h('p', { class: 'hint', style: 'color:var(--muted)' }, 'Sin comandos aún.'),
+      h('button', { class: 'btn primary', style: 'margin-top: 10px; width: 100%; font-size: 13px;', type: 'button',
+        onclick: () => adminPost('/v1/dev/dispatch-ride', { sender_id: i.sender_id, incident_id: i.incident_id, destino: 'Punto de Asistencia Chacao / Altamira' }, '🛵 Yummy Ride de Asistencia despachado') },
+        '🛵 Despachar Yummy Ride de Asistencia')),
 
     h('div', { class: 'sec' }, h('h3', {}, 'Línea de tiempo'),
       h('ol', { class: 'timeline' }, [...d.events].reverse().map((e) => {
@@ -354,13 +444,24 @@ document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('clic
 const dlg = $('dlg-settings');
 const form = $('form-settings');
 $('btn-settings').addEventListener('click', () => {
-  form.api.value = cfg.api; form.token.value = cfg.token; form.admin.value = cfg.admin;
+  form.api.value = cfg.api;
+  form.token.value = cfg.token;
+  form.admin.value = cfg.admin;
+  if (form.mapProvider) form.mapProvider.value = cfg.mapProvider || 'esri';
+  if (form.cartoKey) form.cartoKey.value = cfg.cartoKey || '';
   dlg.showModal();
 });
 dlg.addEventListener('close', () => {
   if (dlg.returnValue !== 'save') return;
-  Object.assign(cfg, { api: form.api.value.trim().replace(/\/$/, ''), token: form.token.value, admin: form.admin.value });
+  Object.assign(cfg, {
+    api: form.api.value.trim().replace(/\/$/, ''),
+    token: form.token.value,
+    admin: form.admin.value,
+    mapProvider: form.mapProvider ? form.mapProvider.value : 'esri',
+    cartoKey: form.cartoKey ? form.cartoKey.value.trim() : '',
+  });
   safe(() => localStorage.setItem('baliza.cfg', JSON.stringify(cfg)));
+  setBaseLayer(cfg.mapProvider, cfg.cartoKey);
   start();
 });
 
@@ -372,5 +473,88 @@ async function start() {
   await Promise.all([loadIncidents(), loadFeatures()]);
 }
 
-setInterval(() => { if (state.ready) { renderList(); if (state.detail) renderDetail(); } }, 20000);
+// Sincronización periódica en vivo cada 2.5 s (respaldo activo de SSE para asegurar tiempo real)
+setInterval(async () => {
+  if (!state.ready) return;
+  await loadIncidents();
+  if (state.selected) await loadDetail();
+}, 2500);
+
+// Actualiza los textos de tiempo relativo ("hace X s") cada 5 s
+setInterval(() => {
+  if (state.ready) {
+    renderList();
+    if (state.detail) renderDetail();
+  }
+}, 5000);
+
+function setMode(mode) {
+  state.mode = mode;
+  $('btn-mode-demo')?.classList.toggle('on', mode === 'demo');
+  $('btn-mode-real')?.classList.toggle('on', mode === 'real');
+  const banner = $('mode-banner');
+  if (banner) {
+    banner.className = `mode-banner ${mode}-banner`;
+    const demoView = $('banner-demo-view');
+    const realView = $('banner-real-view');
+    if (demoView) demoView.style.display = mode === 'demo' ? 'flex' : 'none';
+    if (realView) realView.style.display = mode === 'real' ? 'flex' : 'none';
+  }
+  render();
+}
+
+$('btn-mode-demo')?.addEventListener('click', () => setMode('demo'));
+$('btn-mode-real')?.addEventListener('click', () => setMode('real'));
+
+$('btn-demo-mov')?.addEventListener('click', async () => {
+  toast('Iniciando simulación de desplazamiento en Chacao...', 'var(--accent)');
+  await fetch(`${cfg.api}/v1/dev/run-simulation`, { method: 'POST' }).catch(() => {});
+});
+
+$('btn-demo-clear')?.addEventListener('click', async () => {
+  if (!confirm('¿Deseas limpiar los incidentes y vectores sintéticos de prueba?')) return;
+  await adminPost('/v1/admin/clear-demo', {}, 'Incidentes de prueba limpiados');
+  state.selected = null;
+  state.tracks.clear();
+  scheduleRefresh();
+});
+
+// --- modal qr e interacción jurado ----------------------------------------------------------------
+function showQrModal(d) {
+  const dlgQr = $('dlg-qr');
+  if (!dlgQr) return;
+  const replyUrl = d.primary_reply_url || (d.notifications && d.notifications[0]?.reply_url) || `${cfg.api}/r/demo`;
+  const qrImg = $('qr-img');
+  const qrLink = $('qr-link');
+  if (qrImg) {
+    qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(replyUrl)}`;
+  }
+  if (qrLink) {
+    qrLink.href = replyUrl;
+    qrLink.textContent = replyUrl;
+  }
+  setQrTab('qr');
+  dlgQr.showModal();
+}
+
+function setQrTab(tab) {
+  const isQr = tab === 'qr';
+  $('tab-qr')?.classList.toggle('primary', isQr);
+  $('tab-qr')?.classList.toggle('ghost', !isQr);
+  $('tab-wa')?.classList.toggle('primary', !isQr);
+  $('tab-wa')?.classList.toggle('ghost', isQr);
+  const viewQr = $('view-tab-qr');
+  const viewWa = $('view-tab-wa');
+  if (viewQr) viewQr.style.display = isQr ? 'flex' : 'none';
+  if (viewWa) viewWa.style.display = isQr ? 'none' : 'flex';
+}
+
+$('tab-qr')?.addEventListener('click', () => setQrTab('qr'));
+$('tab-wa')?.addEventListener('click', () => setQrTab('wa'));
+$('btn-close-qr')?.addEventListener('click', () => $('dlg-qr')?.close());
+$('btn-close-qr-top')?.addEventListener('click', () => $('dlg-qr')?.close());
+$('dlg-qr')?.addEventListener('click', (e) => {
+  if (e.target === $('dlg-qr')) $('dlg-qr').close();
+});
+
 start();
