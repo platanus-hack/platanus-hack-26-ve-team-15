@@ -274,6 +274,7 @@ Los nodos intermedios (B) no guardan paquetes de otros; esa "custodia" queda fue
 
 | Estado | Condición |
 |--------|-----------|
+| `sin_enviar` | Ningún vecino aceptó aún el paquete (sin vecinos en rango). Se sigue reintentando. |
 | `enviado` | El paquete salió al mesh (≥ 1 vecino aceptó la escritura). |
 | `sin_confirmar` | Pasaron 30 s sin ACK; se sigue reintentando (R1). |
 | `recibido` | Llegó un ACK firmado por el servidor con `seq` ≥ el enviado. |
@@ -281,6 +282,9 @@ Los nodos intermedios (B) no guardan paquetes de otros; esa "custodia" queda fue
 | `contactos_avisados` | ACK con código 1. |
 | `rechazado` | ACK con código 3. |
 | `detenido` | Se agotó el tope de reintentos sin ACK; reintenta si aparece un vecino. |
+
+Un ACK nunca retrocede el estado (puede llegar desordenado): `recibido` < `en_gestion` < `contactos_avisados`; `rechazado` es final. Solo cuenta un ACK firmado por el servidor, del mismo `incident_id`, con `seq` ≥ el enviado.
+El incidente vive en memoria: si el proceso muere, los reintentos se detienen (pendiente: persistirlo).
 
 La UI **nunca** muestra "entregado" ni "avisados" sin ACK. Las respuestas MSG_IN y CMD_RESULT llegan
 por el mismo mecanismo (R2) y el teléfono no confirma su recepción: el buzón las conserva 24 h.
