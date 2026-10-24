@@ -22,6 +22,7 @@ const opt = (name, dflt) => { const i = args.indexOf(`--${name}`); return i >= 0
 const url = (opt('url', process.env.BALIZA_URL || 'http://localhost:8080')).replace(/\/$/, '');
 const raw = args.includes('--raw');
 const label = opt('label', 'baliza-synthetic-user-1');
+const phone = opt('phone', null);
 
 let failures = 0;
 const check = (ok, msg) => { console.log(`${ok ? '  ok ' : ' FAIL'}  ${msg}`); if (!ok) failures += 1; };
@@ -36,7 +37,7 @@ const user = ed25519FromLabel(label);
 // Llave X25519 estable por etiqueta, para poder abrir los MSG_IN en pruebas posteriores.
 const sealKp = sealKeypairFromSeed(createHash('sha256').update(`${label}:seal`).digest());
 const contacts = [
-  { index: 0, name: 'Contacto Demo Uno', relation: 'familiar', lang: 'es', channels: { sms: '+58 000-0000001', email: 'contacto1@example.com', voice: '+58 000-0000001' } },
+  { index: 0, name: 'Contacto Demo Uno', relation: 'familiar', lang: 'es', channels: { sms: phone || '+58 000-0000001', email: 'contacto1@example.com', voice: '+58 000-0000001' } },
   { index: 1, name: 'Contacto Demo Dos', relation: 'amigo', lang: 'es', channels: { sms: '+58 000-0000002', voice: '+58 000-0000002' } },
 ];
 
