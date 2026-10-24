@@ -90,8 +90,11 @@ const STATUS_BY_EVENT = new Map([
   ['whatsapp.message.delivered', 'delivered'], ['whatsapp.message.read', 'read'], ['whatsapp.message.failed', 'failed'],
 ]);
 
+// El ejemplo de Kapso no siempre trae `type`: sin él vale el texto; con otro tipo (imagen, audio…) se ignora
+// aunque `kapso.content` describa el medio.
 function inboundText(msg) {
-  return msg.type === 'text' ? msg.text?.body : null;
+  if (msg.type && msg.type !== 'text') return null;
+  return msg.text?.body ?? msg.kapso?.content ?? null;
 }
 
 function replyIgnoringUnknown(ctx, from, body, limiter) {

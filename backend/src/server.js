@@ -1,5 +1,6 @@
 // Punto de entrada: `node src/server.js` (o `npm start`).
 import { createApp, startRadioTimer } from './api.js';
+import { providerOf } from './channels.js';
 
 const { ctx, server, close } = createApp();
 const radioTimer = startRadioTimer(ctx);
@@ -14,7 +15,7 @@ server.listen(ctx.config.port, '0.0.0.0', () => {
   log(`Baliza Vital backend en :${config.port}  (server sender_id ${keys.senderId})`);
   log(`  sign_pk_b64=${keys.signPk.toString('base64')}`);
   log(`  FEATURE_PAYMENTS=${config.featurePayments} FEATURE_RIDES=${config.featureRides}`);
-  log(`  texto: ${ctx.channels.sms.live ? ctx.channels.sms.name + ' (real)' : 'simulado'}, correo: ${ctx.channels.email.live ? 'real' : 'simulado'}, voz: ${ctx.channels.voice.live ? 'real' : 'simulada'}`);
+  log(`  texto: ${providerOf(ctx.channels.sms)}, correo: ${providerOf(ctx.channels.email)}, voz: ${providerOf(ctx.channels.voice)}`);
   if (!config.llm.apiKey) log('  (sin ANTHROPIC_API_KEY: avisos con plantilla)');
   if (!config.dashboardToken) log('  (sin DASHBOARD_TOKEN: /v1/incidents y /v1/stream abiertos; solo datos sintéticos)');
   if (config.kapso.apiKey && !config.kapso.webhookSecret) log('  (sin KAPSO_WEBHOOK_SECRET: no se reciben respuestas por WhatsApp)');
