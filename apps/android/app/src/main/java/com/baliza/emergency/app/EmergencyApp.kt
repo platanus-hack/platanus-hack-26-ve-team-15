@@ -16,6 +16,9 @@ import com.baliza.emergency.crypto.SealedBox
 import com.baliza.emergency.identity.ServerKeys
 import com.baliza.emergency.identity.UserIdentityStore
 import com.baliza.emergency.registration.RegistrationClient
+import com.baliza.emergency.replies.PrefsReplyStore
+import com.baliza.emergency.replies.Reply
+import com.baliza.emergency.replies.ReplyInbox
 import com.baliza.emergency.registration.RegistrationRepository
 import com.baliza.emergency.registration.RegistrationResult
 import com.baliza.emergency.sos.Channels
@@ -134,6 +137,23 @@ class EmergencyApp private constructor(context: Context) {
 
         val sosStatus: StateFlow<SosStatus> = sender.status
 
+        /** What the contacts answered, whether it came over the mesh or straight from the server. */
+        private val replyInbox = ReplyInbox(
+            incoming = transport.incoming,
+            identity = identity,
+            serverKeys = identityStore::serverKeys,
+            store = PrefsReplyStore.create(appContext),
+            scope = scope,
+            onNew = { vibrate() }
+        )
+        val replies: StateFlow<List<Reply>> = replyInbox.replies
+
+        @Suppress("DEPRECATION")
+        private fun vibrate() {
+            val vibrator = appContext.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator ?: return
+            vibrator.vibrate(android.os.VibrationEffect.createOneShot(400, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+        }
+
         private val _registered = MutableStateFlow(identityStore.serverKeys() != null)
         val registered: StateFlow<Boolean> = _registered.asStateFlow()
 
@@ -232,6 +252,7 @@ class EmergencyApp private constructor(context: Context) {
             sender.status.value.incidentIdHex?.let(transport::forgetOwn)
             sender.cancel()
             identityStore.wipe()
+            replyInbox.clear()
             contactStore.clear()
             _registered.value = false
             _profile.value = null
