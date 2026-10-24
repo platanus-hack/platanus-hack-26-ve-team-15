@@ -1,5 +1,6 @@
 package com.baliza.emergency
 
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 
 /**
@@ -16,6 +17,12 @@ interface EmergencyMeshTransport {
      * that fall behind lose the oldest packets, never block the mesh.
      */
     val incoming: SharedFlow<ReceivedEmergencyPacket>
+
+    /**
+     * Emits each time a new neighbor comes into range. The SOS sender restarts its retry schedule on
+     * it, because a packet that found nobody may now find someone. Lossy by design.
+     */
+    val newNeighbors: Flow<Unit>
 
     /** Broadcasts [payload] (at most [MAX_PAYLOAD_BYTES]) with an initial envelope TTL of [ttl]. */
     suspend fun send(payload: ByteArray, ttl: Int = DEFAULT_TTL): SendResult

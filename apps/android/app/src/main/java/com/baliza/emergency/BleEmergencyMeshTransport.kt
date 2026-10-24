@@ -3,6 +3,7 @@ package com.baliza.emergency
 import com.bitchat.android.mesh.BluetoothMeshService
 import com.bitchat.android.mesh.EmergencyPacketSink
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.SharedFlow
  */
 class BleEmergencyMeshTransport(
     private val attachSink: (EmergencyPacketSink?) -> Unit,
+    private val attachNeighborListener: ((() -> Unit)?) -> Unit,
     private val sendRaw: suspend (payload: ByteArray, ttl: UByte) -> Boolean
 ) : EmergencyMeshTransport, AutoCloseable {
 
@@ -22,6 +24,9 @@ class BleEmergencyMeshTransport(
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
     override val incoming: SharedFlow<ReceivedEmergencyPacket> = _incoming
+
+    private val _newNeighbors = MutableSharedFlow<Unit>(extraBufferCapacity = 8, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    override val newNeighbors: Flow<Unit> = _newNeighbors
 
     init {
         // Runs on a per-peer mesh worker: tryEmit never suspends, so it cannot stall the mesh.
@@ -35,6 +40,7 @@ class BleEmergencyMeshTransport(
                 )
             )
         })
+        attachNeighborListener { _newNeighbors.tryEmit(Unit) }
     }
 
     override suspend fun send(payload: ByteArray, ttl: Int): SendResult {
@@ -45,7 +51,10 @@ class BleEmergencyMeshTransport(
         return if (accepted) SendResult.SENT else SendResult.NO_NEIGHBOR_ACCEPTED
     }
 
-    override fun close() = attachSink(null)
+    override fun close() {
+        attachSink(null)
+        attachNeighborListener(null)
+    }
 
     companion object {
         private const val INCOMING_BUFFER = 64
@@ -53,6 +62,7 @@ class BleEmergencyMeshTransport(
 
         fun over(mesh: BluetoothMeshService) = BleEmergencyMeshTransport(
             attachSink = mesh::setEmergencySink,
+            attachNeighborListener = mesh::setEmergencyNeighborListener,
             sendRaw = mesh::sendEmergencyPacket
         )
     }

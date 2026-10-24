@@ -1,16 +1,22 @@
 {
   "name": "baliza-vital",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
-  "description": "Baliza Vital: atajos de la raíz (el backend vive en backend/, con su propio package.json)",
+  "description": "Baliza Vital: offline SOS over a Bluetooth mesh. Root scripts run the agent-harness gates; Android is built with apps/android/tools/docker-gradle.sh.",
   "scripts": {
-    "test": "npm --prefix backend test",
+    "test": "npm run check:vectors",
+    "test:backend": "npm --prefix backend test",
+    "check:vectors": "node docs/examples/check-vectors.mjs",
+    "shield": "node scripts/agent-shield.js scan",
     "gauntlet": "node scripts/gauntlet/gauntlet-runner.js",
     "gauntlet:quick": "node scripts/gauntlet/gauntlet-runner.js --quick",
-    "gauntlet:crap": "node scripts/gauntlet/crap-score.js",
+    "gauntlet:crap": "node scripts/gauntlet/crap-score.js --diff",
     "gauntlet:mutate": "node scripts/gauntlet/differential-mutator.js",
-    "shield": "node scripts/agent-shield.js scan",
     "handoff:send": "node scripts/handoff.js send",
-    "handoff:next": "node scripts/handoff.js next"
+    "handoff:next": "node scripts/handoff.js next",
+    "sync:agents": "node scripts/sync-agents.js"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

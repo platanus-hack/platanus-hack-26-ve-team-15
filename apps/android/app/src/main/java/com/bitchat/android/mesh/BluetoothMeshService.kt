@@ -684,6 +684,7 @@ class BluetoothMeshService(private val context: Context) : TransportBridgeServic
         }
             
             override fun onDeviceConnected(device: android.bluetooth.BluetoothDevice) {
+                try { emergencyNeighborListener?.invoke() } catch (_: Exception) { }
                 // Send initial announcements after services are ready
                 serviceScope.launch {
                     Log.i(TAG, "Device connected: ${device.address}")
@@ -1234,6 +1235,13 @@ class BluetoothMeshService(private val context: Context) : TransportBridgeServic
     /**
      * Send broadcast announce with TLV-encoded identity announcement - exactly like iOS
      */
+    @Volatile private var emergencyNeighborListener: (() -> Unit)? = null
+
+    /** Called whenever a new BLE link comes up (a new neighbor in range). Pass null to detach. */
+    fun setEmergencyNeighborListener(listener: (() -> Unit)?) {
+        emergencyNeighborListener = listener
+    }
+
     /** Registers the receiver of EMERGENCY packets (see docs/contrato.md). Pass null to detach. */
     fun setEmergencySink(sink: EmergencyPacketSink?) {
         packetProcessor.emergencySink = sink

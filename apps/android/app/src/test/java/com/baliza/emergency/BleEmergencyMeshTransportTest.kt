@@ -22,11 +22,13 @@ import org.robolectric.RobolectricTestRunner
 class BleEmergencyMeshTransportTest {
 
     private var sink: EmergencyPacketSink? = null
+    private var neighborListener: (() -> Unit)? = null
     private val sent = mutableListOf<Pair<ByteArray, UByte>>()
     private var accept = true
 
     private fun transport() = BleEmergencyMeshTransport(
         attachSink = { sink = it },
+        attachNeighborListener = { neighborListener = it },
         sendRaw = { payload, ttl -> sent += payload to ttl; accept }
     )
 
@@ -103,7 +105,23 @@ class BleEmergencyMeshTransportTest {
     fun `close detaches from the mesh`() {
         val transport = transport()
         assertNotNull(sink)
+        assertNotNull(neighborListener)
         transport.close()
         assertNull(sink)
+        assertNull(neighborListener)
+    }
+
+    @Test
+    fun `a new link is announced to collectors`() = runBlocking {
+        val transport = transport()
+        val heard = async(start = CoroutineStart.UNDISPATCHED) { withTimeout(2_000) { transport.newNeighbors.first() } }
+        neighborListener!!.invoke()
+        heard.await()
+    }
+
+    @Test
+    fun `new links never block the mesh when nobody listens`() {
+        transport()
+        repeat(1_000) { neighborListener!!.invoke() }
     }
 }
