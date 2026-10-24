@@ -5,7 +5,7 @@
   "tech": "node",
   "testCommand": "npm test",
   "sourceDirs": [
-    "src"
+    "backend/src"
   ],
   "coverage": {
     "engine": "auto",

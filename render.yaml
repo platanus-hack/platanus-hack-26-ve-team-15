@@ -1,0 +1,75 @@
+# Blueprint de Render para el backend de Baliza Vital (Dashboard de Render → New → Blueprint).
+# El disco persistente guarda SQLite y las llaves del servidor; exige un plan de pago (starter) y limita el
+# servicio a UNA instancia, que es lo que el backend espera (límites de tasa y cola en memoria).
+# Las variables con `sync: false` se piden al crear el servicio: no se guardan en el repo.
+services:
+  - type: web
+    name: baliza-vital-backend
+    runtime: node
+    rootDir: backend
+    plan: starter
+    region: oregon
+    buildCommand: npm ci --omit=dev
+    startCommand: node src/server.js
+    healthCheckPath: /health
+    autoDeploy: true
+    disk:
+      name: baliza-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_OPTIONS
+        value: --no-warnings
+      - key: TRUST_PROXY
+        value: "true"
+      - key: DATABASE_PATH
+        value: /var/data/baliza.db
+      - key: BALIZA_KEY_FILE
+        value: /var/data/server-keys.json
+      - key: FEATURE_PAYMENTS
+        value: "false"
+      - key: FEATURE_RIDES
+        value: "false"
+      # Seguridad
+      - key: ADMIN_TOKEN
+        sync: false
+      - key: DASHBOARD_TOKEN
+        sync: false
+      # Agente (redacción de avisos con Claude; sin clave se usa la plantilla)
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      # WhatsApp por Kapso
+      - key: KAPSO_API_KEY
+        sync: false
+      - key: KAPSO_PHONE_NUMBER_ID
+        sync: false
+      - key: KAPSO_WEBHOOK_SECRET
+        sync: false
+      - key: KAPSO_TEMPLATE_ALERT
+        sync: false
+      - key: KAPSO_TEMPLATE_MESSAGE
+        sync: false
+      # Correo (Resend) y llamada con voz (ElevenLabs): opcionales
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: ELEVENLABS_AGENT_ID
+        sync: false
+      - key: ELEVENLABS_PHONE_NUMBER_ID
+        sync: false
+
+  # Panel (sitio estático). La URL del backend se fija en dashboard/config.js o con ?api=… en la URL.
+  - type: web
+    name: baliza-vital-dashboard
+    runtime: static
+    rootDir: dashboard
+    staticPublishPath: .
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff

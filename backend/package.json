@@ -1,0 +1,19 @@
+{
+  "name": "baliza-vital-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "API egress, buzón, registro, incidentes y agente de Baliza Vital",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test --no-warnings test/*.test.js",
+    "post-vector": "node scripts/post-vector.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.3.0",
+    "libsodium-wrappers": "0.8.4"
+  }
+}

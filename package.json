@@ -1,0 +1,16 @@
+{
+  "name": "baliza-vital",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Baliza Vital: atajos de la raíz (el backend vive en backend/, con su propio package.json)",
+  "scripts": {
+    "test": "npm --prefix backend test",
+    "gauntlet": "node scripts/gauntlet/gauntlet-runner.js",
+    "gauntlet:quick": "node scripts/gauntlet/gauntlet-runner.js --quick",
+    "gauntlet:crap": "node scripts/gauntlet/crap-score.js",
+    "gauntlet:mutate": "node scripts/gauntlet/differential-mutator.js",
+    "shield": "node scripts/agent-shield.js scan",
+    "handoff:send": "node scripts/handoff.js send",
+    "handoff:next": "node scripts/handoff.js next"
+  }
+}
