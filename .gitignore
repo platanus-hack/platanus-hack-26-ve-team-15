@@ -10,3 +10,6 @@
 # Backend
 node_modules/
 backend/data/
+
+# Local state of scripts/jev-router.js (counts repeated failing commands on this machine)
+.jev-cache.json
