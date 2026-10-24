@@ -162,6 +162,10 @@ En un UPDATE, `severity = 0` significa que el usuario cerró el incidente (R6).
 - `sealed_blob` hacia el servidor: `crypto_box_seal(plaintext, server.seal_pk)`.
 - `sealed_blob` hacia el usuario (MSG_IN, CMD_RESULT): `crypto_box_seal(plaintext, user.seal_pk)`.
 - No hay conversión Ed25519→X25519: el registro envía ambas llaves.
+- **Interoperabilidad verificada** con libsodium en los dos sentidos (`docs/examples/sealedbox.mjs`,
+  vectores en `sealedbox-vectors.json`): la app abre cajas selladas por libsodium y libsodium abre las
+  selladas por la app. El backend debe usar `crypto_box_seal`/`crypto_box_seal_open` y probar contra
+  esos mismos vectores.
 - Reglas del backend: rechazar si `|ahora − timestamp|` es futuro > 10 min o pasado > 7 días,
   si la firma no valida, o si `sender_id` no está registrado.
 

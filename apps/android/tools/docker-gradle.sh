@@ -12,6 +12,11 @@ GRADLE_HOME="$PROJECT_ROOT/.gradle-docker-home"
 # Persisted so the generated debug keystore (~/.android) stays the same between runs;
 # otherwise every build is signed with a new key and `adb install -r` fails.
 BUILD_HOME="$PROJECT_ROOT/.android-docker-home"
+# Shared protocol vectors (docs/examples) read by the unit tests via ../../../docs from /workspace/app.
+REPO_DOCS="$(cd "$PROJECT_ROOT/../../docs" && pwd)"
+# Robolectric downloads ~100 MB of android-all jars per Android version it simulates, into the
+# container user's ~/.m2. Persisting it turns later test runs from tens of minutes into minutes.
+ROBOLECTRIC_M2="$PROJECT_ROOT/.robolectric-m2"
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "error: Docker is required" >&2
@@ -22,7 +27,7 @@ if [ "$#" -eq 0 ]; then
   set -- :app:assembleDebug testDebugUnitTest
 fi
 
-mkdir -p "$GRADLE_HOME" "$BUILD_HOME"
+mkdir -p "$GRADLE_HOME" "$BUILD_HOME" "$ROBOLECTRIC_M2"
 
 docker build \
   --platform linux/amd64 \
@@ -40,6 +45,8 @@ docker run \
   --volume "$PROJECT_ROOT:/workspace" \
   --volume "$GRADLE_HOME:/gradle-home" \
   --volume "$BUILD_HOME:/tmp/build-home" \
+  --volume "$REPO_DOCS:/docs:ro" \
+  --volume "$ROBOLECTRIC_M2:/home/ubuntu/.m2" \
   --entrypoint ./gradlew \
   "$IMAGE_NAME" \
   "$@"
