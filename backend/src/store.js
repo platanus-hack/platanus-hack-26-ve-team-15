@@ -198,6 +198,11 @@ export class Store {
     this.db.prepare('DELETE FROM mailbox WHERE created_at < ?').run(olderThan);
   }
 
+  clearDemoData() {
+    this.db.prepare("DELETE FROM incidents WHERE public_text LIKE '%SOS%' OR public_text LIKE '%Sigo aqui%' OR egress_id = 'post-vector' OR egress_id = 'egress-chacao' OR sender_id IN (SELECT sender_id FROM users WHERE display_name LIKE '%Demo%' OR display_name LIKE '%Movimiento%')").run();
+    this.db.prepare("DELETE FROM packets WHERE egress_id = 'post-vector' OR egress_id = 'egress-chacao'").run();
+  }
+
   // --- eventos, avisos, comandos ----------------------------------------------------
   addEvent({ at, kind, senderId = null, incidentId = null, data = {} }) {
     const r = this.db.prepare('INSERT INTO events (at, kind, sender_id, incident_id, data) VALUES (?,?,?,?,?)')
