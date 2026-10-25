@@ -203,6 +203,16 @@ class EmergencyApp private constructor(context: Context) {
             vibrator.vibrate(android.os.VibrationEffect.createOneShot(400, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
         }
 
+        private val _inviteStep = MutableStateFlow(inviteStore.pending())
+
+        /** True between a registration that brought invite codes and the user finishing the invite step. */
+        val inviteStep: StateFlow<Boolean> = _inviteStep.asStateFlow()
+
+        fun finishInviteStep() {
+            inviteStore.setPending(false)
+            _inviteStep.value = false
+        }
+
         private val _registered = MutableStateFlow(identityStore.serverKeys() != null)
         val registered: StateFlow<Boolean> = _registered.asStateFlow()
 
@@ -240,7 +250,11 @@ class EmergencyApp private constructor(context: Context) {
             val result = RegistrationRepository(identityStore, RegistrationClient(url))
                 .register(profile.displayName, profile.contacts)
             if (result is RegistrationResult.Success) {
-                saveInvites(result)
+                // Right after choosing the contacts is when to invite them: offer it once the codes are in.
+                if (saveInvites(result).isNotEmpty() && whatsappNumber.isNotBlank()) {
+                    inviteStore.setPending(true)
+                    _inviteStep.value = true
+                }
                 _registered.value = true
             }
             return result

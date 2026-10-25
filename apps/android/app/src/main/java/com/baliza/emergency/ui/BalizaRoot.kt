@@ -79,6 +79,7 @@ private fun ReadyContent(vm: BalizaViewModel, engine: EmergencyApp.Engine, onOpe
         }
     }
 
+    val inviteStep by engine.inviteStep.collectAsState()
     if (!registered || current == null) {
         RegistrationScreen(
             initial = current,
@@ -86,6 +87,13 @@ private fun ReadyContent(vm: BalizaViewModel, engine: EmergencyApp.Engine, onOpe
             serverConfigured = vm.settings.baseUrl.isNotBlank(),
             onSubmit = { vm.register(engine, it) },
             footer = debugButton
+        )
+    } else if (inviteStep) {
+        InviteStepScreen(
+            contacts = current.contacts,
+            error = inviteError,
+            onInvite = { index -> vm.invite(engine, index) { link -> openLink(context, link) } },
+            onDone = { vm.clearInviteError(); engine.finishInviteStep() }
         )
     } else {
         SosScreen(
