@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.baliza.emergency.app.ContactProfile
 import com.baliza.emergency.app.EmergencyApp
+import com.baliza.emergency.ask.AskStart
 import com.baliza.emergency.registration.RegistrationResult
 import com.baliza.emergency.sos.StartResult
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,6 +57,19 @@ class BalizaViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    private val _askError = MutableStateFlow<String?>(null)
+    val askError: StateFlow<String?> = _askError.asStateFlow()
+
+    fun ask(engine: EmergencyApp.Engine, question: String) {
+        _askError.value = null
+        viewModelScope.launch { _askError.value = askMessage(engine.ask(question)) }
+    }
+
+    fun resetAsk(engine: EmergencyApp.Engine) {
+        _askError.value = null
+        viewModelScope.launch { engine.resetAsk() }
+    }
+
     fun cancelSos(engine: EmergencyApp.Engine) {
         viewModelScope.launch { engine.cancelSos() }
     }
@@ -81,6 +95,14 @@ class BalizaViewModel(app: Application) : AndroidViewModel(app) {
             is RegistrationResult.InvalidInput -> result.reason
             is RegistrationResult.ServerKeyChanged ->
                 "Las llaves del servidor cambiaron desde tu primer registro. Por seguridad no continúo."
+        }
+
+        fun askMessage(result: AskStart): String? = when (result) {
+            is AskStart.Started -> null
+            is AskStart.Busy -> "Ya hay una pregunta en curso."
+            is AskStart.NotRegistered -> "Falta completar el registro."
+            is AskStart.NoIncident -> "Primero espera la confirmación de tu aviso."
+            is AskStart.Invalid -> "No se pudo preparar la pregunta: ${result.reason}."
         }
 
         fun sosMessage(result: StartResult): String? = when (result) {
