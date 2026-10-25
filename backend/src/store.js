@@ -63,6 +63,11 @@ function contactRow(senderId, c, prev) {
   return [senderId, c.index, c.name, c.relation ?? null, c.lang ?? 'es', ch.sms, ch.email, ch.voice, status];
 }
 
+/** Número de una columna sin '+', espacios, guiones ni paréntesis de apertura (para comparar por sufijo). */
+function phoneSql(col) {
+  return `REPLACE(REPLACE(REPLACE(REPLACE(${col},'+',''),' ',''),'-',''),'(','')`;
+}
+
 /** Estados de entrega de WhatsApp: desde cuáles se puede llegar a cada uno. */
 const WAMID_STATE_FROM = { delivered: ['sent'], read: ['sent', 'delivered'], failed: ['sent', 'delivered'] };
 
@@ -239,9 +244,15 @@ export class Store {
     return this.db.prepare(`SELECT n.sender_id, n.incident_id, n.contact_idx FROM notifications n
       JOIN contacts c ON c.sender_id = n.sender_id AND c.idx = n.contact_idx
       WHERE n.state IN ('sent', 'simulated', 'delivered', 'read')
-        AND (REPLACE(REPLACE(REPLACE(REPLACE(c.sms,'+',''),' ',''),'-',''),'(','') LIKE ?
-          OR REPLACE(REPLACE(REPLACE(REPLACE(c.voice,'+',''),' ',''),'-',''),'(','') LIKE ?)
+        AND (${phoneSql('c.sms')} LIKE ? OR ${phoneSql('c.voice')} LIKE ?)
       ORDER BY n.id DESC LIMIT 1`).get(`%${digits}`, `%${digits}`) ?? null;
+  }
+
+  /** Contactos (de cualquier usuario) cuyo número SMS/WhatsApp termina en esos dígitos, con el nombre del usuario. */
+  findContactsByPhone(digits) {
+    return this.db.prepare(`SELECT c.sender_id, c.idx, c.status, u.display_name FROM contacts c
+      JOIN users u ON u.sender_id = c.sender_id
+      WHERE ${phoneSql('c.sms')} LIKE ? ORDER BY u.created_at, c.idx`).all(`%${digits}`);
   }
 
   /** Último mensaje que un número nos escribió por WhatsApp (abre la ventana de 24 h para texto libre). */
