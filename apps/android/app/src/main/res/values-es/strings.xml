@@ -46,7 +46,7 @@
     <string name="notification_summary_more">y %1$d más</string>
     <string name="notification_messages_from_people">%1$d mensajes de %2$d personas</string>
     <string name="notification_more_conversations">y %1$d conversaciones más</string>
-    <string name="notification_active_peers_title">¡bitchatters cerca!</string>
+    <string name="notification_active_peers_title">Hay teléfonos con Baliza Vital cerca</string>
     <string name="notification_active_peers_one">1 persona cerca</string>
     <string name="notification_active_peers_many">%1$d personas cerca</string>
     <string name="notification_new_messages">Nuevos mensajes</string>
@@ -57,8 +57,8 @@
     <string name="notification_new_activity_in">Nueva actividad en %1$s</string>
     <string name="notification_messages_in">Mensajes en %1$s</string>
     <string name="notification_joined_conversation">%1$s se unió a la conversación</string>
-    <string name="notification_geohash_summary_title_mentions">bitchat – %1$d menciones</string>
-    <string name="notification_geohash_summary_title">bitchat – Chats de ubicación</string>
+    <string name="notification_geohash_summary_title_mentions">Baliza Vital – %1$d menciones</string>
+    <string name="notification_geohash_summary_title">Baliza Vital – Chats de ubicación</string>
     <string name="notification_geohash_summary_text">%1$d mensajes desde %2$d ubicaciones</string>
     <string name="notification_mesh_mention_title_singular">Mencionado en chat mesh</string>
     <string name="notification_mesh_mention_title_plural">%1$d menciones en chat mesh</string>
@@ -348,7 +348,7 @@
   <string name="dismiss">cerrar</string>
   <string name="location_notes_input_placeholder">agrega una nota para este lugar</string>
     <string name="bluetooth_recommended">Bluetooth recomendado</string>
-    <string name="mesh_service_notification_content">Mesh en ejecución — %1$d pares</string>
+    <string name="mesh_service_notification_content">Baliza activa · %1$d teléfonos cerca</string>
 
   <string name="verify_title">verificar</string>
   <string name="verify_my_qr_title">escanear para verificarme</string>
@@ -393,4 +393,7 @@
     <string name="about_app_language">Idioma de la app</string>
     <string name="about_system_default">Predeterminado del sistema</string>
     <string name="about_select_language">Seleccionar idioma</string>
+    <string name="notification_action_quit_bitchat">Cerrar Baliza Vital</string>
+    <string name="mesh_service_channel_name">Baliza en segundo plano</string>
+    <string name="mesh_service_channel_desc">Mantiene activa la red Bluetooth para que las alertas salten entre teléfonos</string>
 </resources>

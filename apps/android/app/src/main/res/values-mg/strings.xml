@@ -46,7 +46,6 @@
     <string name="notification_summary_more">ary %1$d hafa</string>
     <string name="notification_messages_from_people">%1$d hafatra avy amin\'ny olona %2$d</string>
     <string name="notification_more_conversations">ary %1$d resaka hafa</string>
-    <string name="notification_active_peers_title">bitchatter akaiky!</string>
     <string name="notification_active_peers_one">Olona 1 manodidina</string>
     <string name="notification_active_peers_many">Olona %1$d manodidina</string>
     <string name="notification_new_messages">Hafatra vaovao</string>
@@ -57,8 +56,6 @@
     <string name="notification_new_activity_in">Hetsika vaovao ao amin\'ny %1$s</string>
     <string name="notification_messages_in">Hafatra ao amin\'ny %1$s</string>
     <string name="notification_joined_conversation">%1$s dia niditra tamin\'ny resaka</string>
-    <string name="notification_geohash_summary_title_mentions">bitchat - %1$d fanaovana tsiahy</string>
-    <string name="notification_geohash_summary_title">bitchat - resaka toerana</string>
     <string name="notification_geohash_summary_text">%1$d hafatra avy amin\'ny toerana %2$d</string>
     <string name="notification_mesh_mention_title_singular">Voatonona ao amin\'ny Mesh Chat</string>
     <string name="notification_mesh_mention_title_plural">%1$d fanaovana tsiahy ao amin\'ny Mesh Chat</string>

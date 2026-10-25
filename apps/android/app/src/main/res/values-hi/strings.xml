@@ -57,8 +57,6 @@
     <string name="notification_new_activity_in">%1$s में नई गतिविधि</string>
     <string name="notification_messages_in">%1$s में संदेश</string>
     <string name="notification_joined_conversation">%1$s बातचीत में शामिल हुआ/हुई</string>
-    <string name="notification_geohash_summary_title_mentions">bitchat – %1$d उल्लेख</string>
-    <string name="notification_geohash_summary_title">bitchat – स्थान चैट</string>
     <string name="notification_geohash_summary_text">%2$d स्थानों से %1$d संदेश</string>
     <string name="notification_mesh_mention_title_singular">मेष चैट में उल्लेख</string>
     <string name="notification_mesh_mention_title_plural">मेष चैट में %1$d उल्लेख</string>

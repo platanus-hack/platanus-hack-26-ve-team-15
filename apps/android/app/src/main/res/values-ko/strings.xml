@@ -46,7 +46,6 @@
     <string name="notification_summary_more">그리고 %1$d개 더</string>
     <string name="notification_messages_from_people">%2$d명에게서 %1$d개의 메시지</string>
     <string name="notification_more_conversations">그리고 %1$d개의 대화 더</string>
-    <string name="notification_active_peers_title">근처 bitchatter!</string>
     <string name="notification_active_peers_one">근처 1명</string>
     <string name="notification_active_peers_many">근처 %1$d명</string>
     <string name="notification_new_messages">새 메시지</string>
@@ -57,8 +56,6 @@
     <string name="notification_new_activity_in">%1$s의 새 활동</string>
     <string name="notification_messages_in">%1$s의 메시지</string>
     <string name="notification_joined_conversation">%1$s님이 대화에 참여했습니다</string>
-    <string name="notification_geohash_summary_title_mentions">bitchat – %1$d회 언급</string>
-    <string name="notification_geohash_summary_title">bitchat – 위치 채팅</string>
     <string name="notification_geohash_summary_text">%2$d개의 장소에서 온 %1$d개의 메시지</string>
     <string name="notification_mesh_mention_title_singular">메쉬 채팅에서 언급됨</string>
     <string name="notification_mesh_mention_title_plural">메쉬 채팅에서 %1$d회 언급</string>

@@ -46,7 +46,6 @@
     <string name="notification_summary_more">en %1$d meer</string>
     <string name="notification_messages_from_people">%1$d berichten van %2$d personen</string>
     <string name="notification_more_conversations">en %1$d meer conversaties</string>
-    <string name="notification_active_peers_title">bitchatters in de buurt!</string>
     <string name="notification_active_peers_one">1 persoon in de buurt</string>
     <string name="notification_active_peers_many">%1$d personen in de buurt</string>
     <string name="notification_new_messages">Nieuwe berichten</string>
@@ -57,8 +56,6 @@
     <string name="notification_new_activity_in">Nieuwe activiteit in %1$s</string>
     <string name="notification_messages_in">Berichten in %1$s</string>
     <string name="notification_joined_conversation">%1$s is toegetreden tot het gesprek</string>
-    <string name="notification_geohash_summary_title_mentions">bitchat - %1$d vermeldingen</string>
-    <string name="notification_geohash_summary_title">bitchat - locatiechats</string>
     <string name="notification_geohash_summary_text">%1$d berichten van %2$d locaties</string>
     <string name="notification_mesh_mention_title_singular">Vermeld in meshchat</string>
     <string name="notification_mesh_mention_title_plural">%1$d vermeldingen in meshchat</string>

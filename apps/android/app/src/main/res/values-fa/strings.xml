@@ -46,7 +46,6 @@
     <string name="notification_summary_more">و %1$d مورد دیگر</string>
     <string name="notification_messages_from_people">%1$d پیام از %2$d نفر</string>
     <string name="notification_more_conversations">و %1$d گفت‌وگوی دیگر</string>
-    <string name="notification_active_peers_title">کاربران bitchat در نزدیکی!</string>
     <string name="notification_active_peers_one">۱ نفر در نزدیکی</string>
     <string name="notification_active_peers_many">%1$d نفر در نزدیکی</string>
     <string name="notification_new_messages">پیام‌های جدید</string>
@@ -57,8 +56,6 @@
     <string name="notification_new_activity_in">فعالیت جدید در %1$s</string>
     <string name="notification_messages_in">پیام‌ها در %1$s</string>
     <string name="notification_joined_conversation">%1$s به گفت‌وگو پیوست</string>
-    <string name="notification_geohash_summary_title_mentions">bitchat – %1$d مورد ذکر</string>
-    <string name="notification_geohash_summary_title">bitchat – گفت‌وگوی مکانی</string>
     <string name="notification_geohash_summary_text">%1$d پیام از %2$d موقعیت</string>
     <string name="notification_mesh_mention_title_singular">ذکر در گفت‌وگوی مِش</string>
     <string name="notification_mesh_mention_title_plural">%1$d مورد ذکر در گفت‌وگوی مِش</string>

@@ -46,7 +46,6 @@
     <string name="notification_summary_more">dan %1$d lagi</string>
     <string name="notification_messages_from_people">%1$d pesan dari %2$d orang</string>
     <string name="notification_more_conversations">dan %1$d percakapan lagi</string>
-    <string name="notification_active_peers_title">bitchatter terdekat!</string>
     <string name="notification_active_peers_one">1 orang terdekat</string>
     <string name="notification_active_peers_many">%1$d orang terdekat</string>
     <string name="notification_new_messages">Pesan baru</string>
@@ -57,8 +56,6 @@
     <string name="notification_new_activity_in">Aktivitas baru di %1$s</string>
     <string name="notification_messages_in">Pesan di %1$s</string>
     <string name="notification_joined_conversation">%1$s bergabung dengan percakapan</string>
-    <string name="notification_geohash_summary_title_mentions">bitchat – %1$d penyebutan</string>
-    <string name="notification_geohash_summary_title">bitchat – Chat lokasi</string>
     <string name="notification_geohash_summary_text">%1$d pesan dari %2$d lokasi</string>
     <string name="notification_mesh_mention_title_singular">Disebut di Mesh Chat</string>
     <string name="notification_mesh_mention_title_plural">%1$d penyebutan di Mesh Chat</string>

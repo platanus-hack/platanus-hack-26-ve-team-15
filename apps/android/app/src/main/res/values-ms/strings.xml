@@ -43,7 +43,6 @@
   <string name="notification_summary_more">dan %1$d lagi</string>
   <string name="notification_messages_from_people">%1$d mesej daripada %2$d orang</string>
   <string name="notification_more_conversations">dan %1$d perbualan lagi</string>
-  <string name="notification_active_peers_title">👥 bitchatter berdekatan!</string>
   <string name="notification_active_peers_one">1 orang berdekatan</string>
   <string name="notification_active_peers_many">%1$d orang berdekatan</string>
   <string name="notification_new_messages">Mesej Baharu</string>
@@ -54,8 +53,6 @@
   <string name="notification_new_activity_in">Aktiviti baharu dalam %1$s</string>
   <string name="notification_messages_in">Mesej dalam %1$s</string>
   <string name="notification_joined_conversation">%1$s telah menyertai perbualan</string>
-  <string name="notification_geohash_summary_title_mentions">bitchat - %1$d sebutan</string>
-  <string name="notification_geohash_summary_title">bitchat - sembang lokasi</string>
   <string name="notification_geohash_summary_text">%1$d mesej daripada %2$d lokasi</string>
   <string name="notification_mesh_mention_title_singular">Disebut dalam Sembang Mesh</string>
   <string name="notification_mesh_mention_title_plural">%1$d sebutan dalam Sembang Mesh</string>
@@ -150,7 +147,6 @@
   <string name="cd_open_map">Buka peta</string>
   <string name="cd_remove_bookmark">Alih keluar penanda buku</string>
   <string name="cd_teleport">Teleport</string>
-  <string name="notification_action_quit_bitchat">Keluar bitchat</string>
   <string name="about_background_title">jalankan di latar belakang</string>
   <string name="about_background_desc">kekalkan mesh aktif apabila apl ditutup (perkhidmatan latar depan)</string>
   <string name="cd_leave_channel">Keluar saluran</string>

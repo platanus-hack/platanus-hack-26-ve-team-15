@@ -46,7 +46,6 @@
     <string name="notification_summary_more">ほか %1$d 件</string>
     <string name="notification_messages_from_people">%2$d 人からの %1$d 件のメッセージ</string>
     <string name="notification_more_conversations">ほか %1$d 会話</string>
-    <string name="notification_active_peers_title">近くに bitchatter ！</string>
     <string name="notification_active_peers_one">近くに 1 人</string>
     <string name="notification_active_peers_many">近くに %1$d 人</string>
     <string name="notification_new_messages">新着メッセージ</string>
@@ -57,8 +56,6 @@
     <string name="notification_new_activity_in">%1$s の新しいアクティビティ</string>
     <string name="notification_messages_in">%1$s のメッセージ</string>
     <string name="notification_joined_conversation">%1$s が会話に参加しました</string>
-    <string name="notification_geohash_summary_title_mentions">bitchat – %1$d 件のメンション</string>
-    <string name="notification_geohash_summary_title">bitchat – ロケーションチャット</string>
     <string name="notification_geohash_summary_text">%2$d 箇所からの %1$d 件のメッセージ</string>
     <string name="notification_mesh_mention_title_singular">メッシュチャットでメンション</string>
     <string name="notification_mesh_mention_title_plural">メッシュチャットで %1$d 件のメンション</string>

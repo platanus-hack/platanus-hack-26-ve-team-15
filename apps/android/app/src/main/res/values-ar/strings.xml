@@ -57,8 +57,6 @@
     <string name="notification_new_activity_in">نشاط جديد في %1$s</string>
     <string name="notification_messages_in">رسائل في %1$s</string>
     <string name="notification_joined_conversation">%1$s انضم إلى المحادثة</string>
-    <string name="notification_geohash_summary_title_mentions">bitchat – %1$d إشارات</string>
-    <string name="notification_geohash_summary_title">bitchat – محادثات المواقع</string>
     <string name="notification_geohash_summary_text">%1$d رسائل من %2$d مواقع</string>
     <string name="notification_mesh_mention_title_singular">تم ذكرك في محادثة الشبكة</string>
     <string name="notification_mesh_mention_title_plural">%1$d من الإشارات في محادثة الشبكة</string>
