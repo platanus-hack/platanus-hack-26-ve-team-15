@@ -63,7 +63,7 @@ function esc(s) {
 }
 
 const PAGE = readFileSync(new URL('./reply-page.html', import.meta.url), 'utf8');
-const SENT_HTML = '<p class="ok">Enviado. Gracias.</p>';
+const SENT_HTML = '<p class="ok" role="status">Enviado. Gracias. Le llegará a su teléfono en cuanto haya uno con internet cerca.</p>';
 
 /** Página mínima para responder desde el enlace del aviso (sin cuentas ni JS). */
 export function replyPage(ctx, token, { sent = false } = {}) {

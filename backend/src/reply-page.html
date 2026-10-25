@@ -1,7 +1,64 @@
 <!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Baliza Vital · Responder</title><style>body{font:16px system-ui;max-width:28rem;margin:2rem auto;padding:0 1rem}textarea{width:100%;height:7rem;font:inherit}
-button{font:inherit;padding:.6rem 1.2rem;margin-top:.6rem}.ok{color:#0a7a2f}</style></head><body>
-<h1>Baliza Vital</h1><p>{{contact}}, {{user}} pidió ayuda sin internet. Tu respuesta le llegará a su teléfono cuando haya cobertura de la red cercana.</p>
+<meta name="color-scheme" content="dark"><meta name="robots" content="noindex">
+<title>Baliza Vital · Responder</title>
+<style>
+:root{--bg:#111111;--card:#1C1C1E;--high:#2A2A2D;--line:#3A3A3F;--text:#F2F2F2;--muted:#A0A0A6;--red:#E53935;--good:#4CAF50}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:30rem;margin:0 auto;padding:20px 16px 32px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.05rem;margin-bottom:20px}
+.brand svg{width:34px;height:34px;flex:none}
+.card{background:var(--card);border-radius:18px;padding:20px}
+.alert{border:1px solid rgba(229,57,53,.45)}
+.tag{display:inline-flex;align-items:center;gap:8px;color:var(--red);font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:0 0 0 0 rgba(229,57,53,.6);animation:pulse 1.8s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 10px rgba(229,57,53,0)}100%{box-shadow:0 0 0 0 rgba(229,57,53,0)}}
+@media (prefers-reduced-motion:reduce){.dot{animation:none}}
+h1{font-size:1.6rem;line-height:1.2;margin:10px 0 8px}
+p{margin:0 0 10px}
+.muted{color:var(--muted)}
+.ok{background:rgba(76,175,80,.14);border:1px solid rgba(76,175,80,.45);color:#9BE29F;border-radius:14px;padding:12px 14px;margin:16px 0 0}
+form{margin:0}
+label{display:block;font-weight:600;margin:22px 0 8px}
+textarea{width:100%;min-height:8rem;resize:vertical;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font:inherit}
+textarea:focus{outline:none;border-color:var(--red);box-shadow:0 0 0 3px rgba(229,57,53,.25)}
+.hint{font-size:.85rem;color:var(--muted);margin-top:6px}
+.send{display:block;width:100%;margin-top:14px;padding:14px;border:0;border-radius:999px;background:var(--red);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.send:active{transform:scale(.98)}
+h2{font-size:.95rem;font-weight:600;color:var(--muted);margin:26px 0 10px}
+.quick{display:flex;flex-wrap:wrap;gap:8px}
+.quick button{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:999px;padding:9px 14px;font:inherit;font-size:.95rem;cursor:pointer}
+.quick button:active{border-color:var(--red)}
+footer{margin-top:28px;font-size:.85rem;color:var(--muted)}
+</style></head><body><main>
+
+<div class="brand">
+<svg viewBox="207 97 586 586" aria-hidden="true"><rect x="214" y="104" width="572" height="572" rx="118" fill="#1C1C1E" stroke="#E53935" stroke-width="14"/><path d="M300 560L300 250L500 440L700 250" fill="none" stroke="#5A5A60" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/><path d="M700 250L700 560" stroke="#E53935" stroke-width="22" stroke-linecap="round"/><g fill="#F2F2F2" stroke="#1C1C1E" stroke-width="12"><circle cx="300" cy="560" r="30"/><circle cx="300" cy="250" r="30"/><circle cx="500" cy="440" r="30"/><circle cx="700" cy="250" r="30"/></g><circle cx="700" cy="560" r="44" fill="#E53935" stroke="#1C1C1E" stroke-width="12"/><circle cx="700" cy="560" r="14" fill="#fff"/></svg>
+Baliza Vital
+</div>
+
+<section class="card alert">
+<span class="tag"><span class="dot"></span>Pedido de ayuda</span>
+<h1>{{user}} pidió ayuda</h1>
+<p>Hola {{contact}}. {{user}} está sin internet y te eligió como contacto de emergencia.</p>
+<p class="muted">Tu respuesta viaja de teléfono en teléfono por Bluetooth hasta el suyo. Puede tardar unos minutos.</p>
+</section>
+
 {{sent}}
-<form method="post" action="/r/{{token}}"><textarea name="text" maxlength="{{max}}" required placeholder="Ej.: Voy para allá, aguanta"></textarea>
-<button type="submit">Enviar respuesta</button></form></body></html>
+
+<form method="post" action="/r/{{token}}">
+<label for="text">Tu respuesta</label>
+<textarea id="text" name="text" maxlength="{{max}}" required placeholder="Ej.: Voy para allá, aguanta"></textarea>
+<div class="hint">Hasta {{max}} caracteres. Escribe algo corto y claro.</div>
+<button class="send" type="submit">Enviar respuesta</button>
+</form>
+
+<h2>Respuestas rápidas</h2>
+<div class="quick">
+<form method="post" action="/r/{{token}}"><input type="hidden" name="text" value="Voy para allá"><button type="submit">Voy para allá</button></form>
+<form method="post" action="/r/{{token}}"><input type="hidden" name="text" value="Ya avisé a emergencias"><button type="submit">Ya avisé a emergencias</button></form>
+<form method="post" action="/r/{{token}}"><input type="hidden" name="text" value="Quédate donde estás, te estamos buscando"><button type="submit">Quédate donde estás</button></form>
+</div>
+
+<footer>Si hay peligro inmediato, llama a los servicios de emergencia de tu zona.</footer>
+</main></body></html>
