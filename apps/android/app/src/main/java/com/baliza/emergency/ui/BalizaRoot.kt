@@ -57,6 +57,8 @@ private fun ReadyContent(vm: BalizaViewModel, engine: EmergencyApp.Engine, onOpe
     val askError by vm.askError.collectAsState()
     val pay by engine.payStatus.collectAsState()
     val payError by vm.payError.collectAsState()
+    val inviteError by vm.inviteError.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
     val registration by vm.registration.collectAsState()
     val sosError by vm.sosError.collectAsState()
     var showDebug by rememberSaveable { mutableStateOf(false) }
@@ -77,6 +79,7 @@ private fun ReadyContent(vm: BalizaViewModel, engine: EmergencyApp.Engine, onOpe
         }
     }
 
+    val inviteStep by engine.inviteStep.collectAsState()
     if (!registered || current == null) {
         RegistrationScreen(
             initial = current,
@@ -84,6 +87,13 @@ private fun ReadyContent(vm: BalizaViewModel, engine: EmergencyApp.Engine, onOpe
             serverConfigured = vm.settings.baseUrl.isNotBlank(),
             onSubmit = { vm.register(engine, it) },
             footer = debugButton
+        )
+    } else if (inviteStep) {
+        InviteStepScreen(
+            contacts = current.contacts,
+            error = inviteError,
+            onInvite = { index -> vm.invite(engine, index) { link -> openLink(context, link) } },
+            onDone = { vm.clearInviteError(); engine.finishInviteStep() }
         )
     } else {
         SosScreen(
@@ -100,6 +110,10 @@ private fun ReadyContent(vm: BalizaViewModel, engine: EmergencyApp.Engine, onOpe
             onResetAsk = { vm.resetAsk(engine) },
             onPay = { vm.pay(engine, it) },
             onResetPay = { vm.resetPay(engine) },
+            canInvite = engine.whatsappNumber.isNotBlank(),
+            inviteError = inviteError,
+            onInvite = { index -> vm.invite(engine, index) { link -> openLink(context, link) } },
+            onCloseInvite = vm::clearInviteError,
             onStart = { category, severity, text, note, contacts -> vm.startSos(engine, category, severity, text, note, contacts) },
             onCancel = { vm.cancelSos(engine) },
             onDismissError = vm::clearSosError,
@@ -120,4 +134,13 @@ private fun Centered(content: @Composable () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally
     ) { content() }
+}
+
+/** Opens a wa.me link: WhatsApp if installed, the browser otherwise. */
+private fun openLink(context: android.content.Context, link: String) {
+    try {
+        context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(link)))
+    } catch (_: android.content.ActivityNotFoundException) {
+        // Nothing on this phone opens links: there is no WhatsApp to invite through.
+    }
 }

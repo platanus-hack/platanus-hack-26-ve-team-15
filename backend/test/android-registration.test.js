@@ -40,7 +40,9 @@ test('registro como lo envía la app Android: acentos, emoji, relation vacía; l
     assert.equal(typeof json.server.key_id, 'string');
     assert.equal(Buffer.from(json.server.sign_pk_b64, 'base64').length, 32);
     assert.equal(Buffer.from(json.server.seal_pk_b64, 'base64').length, 32);
-    assert.deepEqual(json.contacts, [{ index: 0, status: 'pending_verification' }, { index: 31, status: 'pending_verification' }]);
+    assert.deepEqual(json.contacts.map(({ index, status }) => ({ index, status })), [{ index: 0, status: 'pending_verification' }, { index: 31, status: 'pending_verification' }]);
+    // Cada contacto trae su código de invitación (null si no tiene teléfono); el cliente ignora campos que no conoce.
+    for (const c of json.contacts) assert.ok(c.invite_code === null || /^[0-9A-HJKMNP-TV-Z]{8}$/.test(c.invite_code));
 
     const stored = app.store.getContact(phone.senderId, 0);
     assert.equal(stored.name, 'José Ñandú 🚑');

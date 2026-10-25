@@ -144,7 +144,7 @@ class RegistrationClient(
             if (pinned != null && !pinned.sameKeysAs(keys)) return RegistrationResult.ServerKeyChanged()
             val statuses = json.getAsJsonArray("contacts").map {
                 val o = it.asJsonObject
-                ContactStatus(o.get("index").asInt, o.get("status").asString)
+                ContactStatus(o.get("index").asInt, o.get("status").asString, inviteCode(o))
             }
             RegistrationResult.Success(senderId, keys, statuses)
         } catch (_: RuntimeException) {
@@ -152,6 +152,10 @@ class RegistrationClient(
             RegistrationResult.BadResponse("response does not follow the contract")
         }
     }
+
+    /** Optional: an older server sends none, and anything not shaped like a code is dropped. */
+    private fun inviteCode(obj: JsonObject): String? =
+        obj.get("invite_code")?.takeIf { it.isJsonPrimitive }?.asString?.takeIf { INVITE_CODE.matches(it) }
 
     private fun key(obj: JsonObject, field: String): ByteArray? = try {
         Base64.getDecoder().decode(obj.get(field).asString).takeIf { it.size == Ed25519.KEY_BYTES }
@@ -162,6 +166,7 @@ class RegistrationClient(
     companion object {
         private val JSON = "application/json".toMediaType()
         private const val MAX_DETAIL = 300
+        private val INVITE_CODE = Regex("^[0-9A-HJKMNP-TV-Z]{8}$")
 
         fun defaultClient(): OkHttpClient = OkHttpClient.Builder()
             .connectTimeout(10, TimeUnit.SECONDS)

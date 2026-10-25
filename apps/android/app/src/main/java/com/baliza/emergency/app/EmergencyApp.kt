@@ -15,6 +15,8 @@ import com.baliza.emergency.identity.UserIdentity
 import com.baliza.emergency.crypto.SealedBox
 import com.baliza.emergency.identity.ServerKeys
 import com.baliza.emergency.identity.UserIdentityStore
+import com.baliza.emergency.registration.InviteLinks
+import com.baliza.emergency.registration.PrefsInviteStore
 import com.baliza.emergency.registration.RegistrationClient
 import com.baliza.emergency.ask.AskStart
 import com.baliza.emergency.ask.AskStatus
@@ -103,6 +105,7 @@ class EmergencyApp private constructor(context: Context) {
         private val identityStore = UserIdentityStore.create(appContext)
         private val contactStore = ContactStore.create(appContext)
         private val incidentStore: IncidentStore = PrefsIncidentStore.create(appContext)
+        private val inviteStore = PrefsInviteStore.create(appContext)
         private val identity = identityStore.loadOrCreate()
 
         private var attachedMesh: BluetoothMeshService? = null
@@ -200,6 +203,16 @@ class EmergencyApp private constructor(context: Context) {
             vibrator.vibrate(android.os.VibrationEffect.createOneShot(400, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
         }
 
+        private val _inviteStep = MutableStateFlow(inviteStore.pending())
+
+        /** True between a registration that brought invite codes and the user finishing the invite step. */
+        val inviteStep: StateFlow<Boolean> = _inviteStep.asStateFlow()
+
+        fun finishInviteStep() {
+            inviteStore.setPending(false)
+            _inviteStep.value = false
+        }
+
         private val _registered = MutableStateFlow(identityStore.serverKeys() != null)
         val registered: StateFlow<Boolean> = _registered.asStateFlow()
 
@@ -236,8 +249,48 @@ class EmergencyApp private constructor(context: Context) {
             }
             val result = RegistrationRepository(identityStore, RegistrationClient(url))
                 .register(profile.displayName, profile.contacts)
-            if (result is RegistrationResult.Success) _registered.value = true
+            if (result is RegistrationResult.Success) {
+                // Right after choosing the contacts is when to invite them: offer it once the codes are in.
+                if (saveInvites(result).isNotEmpty() && whatsappNumber.isNotBlank()) {
+                    inviteStore.setPending(true)
+                    _inviteStep.value = true
+                }
+                _registered.value = true
+            }
             return result
+        }
+
+        private fun saveInvites(result: RegistrationResult.Success): Map<Int, String> =
+            result.contacts.mapNotNull { c -> c.inviteCode?.let { c.index to it } }.toMap().also(inviteStore::save)
+
+        /** The WhatsApp number contacts accept at; blank in a build without it, which hides the invite button. */
+        val whatsappNumber: String get() = com.bitchat.android.BuildConfig.BALIZA_WHATSAPP_NUMBER
+
+        /**
+         * The link that opens the user's WhatsApp with an invitation for [contactIndex]: it carries the code of this
+         * relationship, so accepting it verifies this user only. A user registered before codes existed has none
+         * stored: registering again (it keeps every verification) fetches them, which needs internet once.
+         */
+        suspend fun inviteLink(contactIndex: Int): InviteResult {
+            if (whatsappNumber.isBlank()) return InviteResult.Failed("Esta versión no tiene el número de WhatsApp de Baliza.")
+            val profile = _profile.value ?: return InviteResult.Failed("Primero completa el registro.")
+            val phone = profile.contacts.firstOrNull { it.index == contactIndex }?.sms
+                ?: return InviteResult.Failed("Ese contacto no tiene teléfono.")
+            val code = inviteStore.load()[contactIndex] ?: when (val r = registerAgain(profile)) {
+                is RegistrationResult.Success -> saveInvites(r)[contactIndex]
+                    ?: return InviteResult.Failed("El servidor todavía no prepara invitaciones: hay que actualizarlo.")
+                is RegistrationResult.Network -> return InviteResult.Failed("Necesitas internet una vez para preparar la invitación.")
+                null -> return InviteResult.Failed("El servidor no está configurado en esta versión.")
+                else -> return InviteResult.Failed("El servidor no pudo preparar la invitación. Inténtalo más tarde.")
+            }
+            val text = InviteLinks.message(profile.displayName, InviteLinks.acceptLink(whatsappNumber, code))
+            return InviteResult.Ready(InviteLinks.shareLink(phone, text))
+        }
+
+        /** Same data again: the server keeps every verification and answers with the current codes. Null with no server. */
+        private suspend fun registerAgain(profile: ContactProfile): RegistrationResult? {
+            val url = settings.baseUrl.takeIf { it.isNotBlank() } ?: return null
+            return RegistrationRepository(identityStore, RegistrationClient(url)).register(profile.displayName, profile.contacts)
         }
 
         suspend fun startSos(
@@ -331,4 +384,11 @@ class EmergencyApp private constructor(context: Context) {
         fun get(context: Context): EmergencyApp =
             instance ?: synchronized(this) { instance ?: EmergencyApp(context).also { instance = it } }
     }
+}
+
+sealed interface InviteResult {
+    /** A wa.me link to open: the user's WhatsApp, with the invitation written to the contact. */
+    class Ready(val link: String) : InviteResult
+
+    class Failed(val message: String) : InviteResult
 }
