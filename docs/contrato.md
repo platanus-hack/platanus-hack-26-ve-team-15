@@ -378,14 +378,18 @@ Respuesta `201`:
   "sender_id": "930bda7e20b63bb9",
   "server": { "key_id": "k1", "sign_pk_b64": "dKjbngLxs1KmFpRnihB6JlcLSE3RR9Qow05dCLr5DRY=",
               "seal_pk_b64": "<X25519 pk del servidor>" },
-  "contacts": [ { "index": 0, "status": "pending_verification" },
-                { "index": 1, "status": "pending_verification" } ]
+  "contacts": [ { "index": 0, "status": "pending_verification", "invite_code": "K7M2QX9P" },
+                { "index": 1, "status": "pending_verification", "invite_code": null } ]
 }
 ```
 
 - `index` es el número corto 0..31 que el mesh usa para referirse a un contacto.
 - `PUT /v1/users/{sender_id}/contacts` actualiza contactos con las mismas cabeceras de firma.
 - Estados de contacto: `pending_verification`, `verified`. Solo contactos del equipo en el demo.
+- `invite_code`: código de invitación de esa relación (8 caracteres Crockford base32), o `null` si el contacto no
+  tiene teléfono. El contacto lo envía por WhatsApp como **ACEPTO <código>** y solo esa relación queda `verified`;
+  **BAJA** lo revierte (sin código, en todas sus relaciones). No cambia al registrarse de nuevo; sí si cambia el
+  teléfono de ese contacto. No es secreto respecto al contacto: va en el enlace que el usuario le manda.
 - Telegram queda descartado como canal.
 
 ## 7. Herramientas del agente IA

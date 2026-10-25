@@ -21,7 +21,8 @@ test('registro: devuelve sender_id, llaves del servidor y contactos pending_veri
     assert.equal(reg.json.sender_id, phone.senderId);
     assert.equal(reg.json.server.key_id, 'k1');
     assert.equal(Buffer.from(reg.json.server.sign_pk_b64, 'base64').equals(app.keys.signPk), true);
-    assert.deepEqual(reg.json.contacts, [{ index: 0, status: 'pending_verification' }, { index: 1, status: 'pending_verification' }]);
+    assert.deepEqual(reg.json.contacts.map(({ index, status }) => ({ index, status })), [{ index: 0, status: 'pending_verification' }, { index: 1, status: 'pending_verification' }]);
+    for (const c of reg.json.contacts) assert.match(c.invite_code, /^[0-9A-HJKMNP-TV-Z]{8}$/);
   } finally { app.close(); }
 });
 

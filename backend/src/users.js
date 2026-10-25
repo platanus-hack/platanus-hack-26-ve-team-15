@@ -2,6 +2,7 @@
 import { createHash } from 'node:crypto';
 import { senderIdOf, verifyDetached } from './codec.js';
 import { HttpError } from './http.js';
+import { inviteCode } from './invites.js';
 
 const MAX_CONTACTS = 32;
 const CHANNEL_KEYS = ['sms', 'email', 'voice'];
@@ -72,8 +73,9 @@ export function validateContacts(list) {
   return list.map((c) => normalizeContact(c, seen));
 }
 
+/** `invite_code`: lo que el contacto envía con ACEPTO para aceptar a este usuario (null si no tiene teléfono). */
 function contactsView(ctx, senderId) {
-  return ctx.store.getContacts(senderId).map((c) => ({ index: c.idx, status: c.status }));
+  return ctx.store.getContacts(senderId).map((c) => ({ index: c.idx, status: c.status, invite_code: inviteCode(ctx, senderId, c.idx, c.sms) }));
 }
 
 export function registerUser(ctx, { rawBody, pubkeyB64, signatureB64 }) {

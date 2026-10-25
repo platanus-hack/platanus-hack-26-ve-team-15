@@ -250,7 +250,7 @@ export class Store {
 
   /** Contactos (de cualquier usuario) cuyo número SMS/WhatsApp termina en esos dígitos, con el nombre del usuario. */
   findContactsByPhone(digits) {
-    return this.db.prepare(`SELECT c.sender_id, c.idx, c.status, u.display_name FROM contacts c
+    return this.db.prepare(`SELECT c.sender_id, c.idx, c.status, c.sms, u.display_name FROM contacts c
       JOIN users u ON u.sender_id = c.sender_id
       WHERE ${phoneSql('c.sms')} LIKE ? ORDER BY u.created_at, c.idx`).all(`%${digits}`);
   }
