@@ -9,6 +9,24 @@ const CMD_STATUS = { 0: 'ok', 1: 'rechazado', 2: 'error', 3: 'función desactiva
 const EVENT_KINDS = ['user_registered', 'user_updated', 'contacts_updated', 'incident_created', 'incident_updated', 'packet_received',
   'mailbox', 'contacts_notified', 'contact_reply', 'command', 'blob_unreadable', 'notification_status'];
 
+const CAT_INFO = {
+  0: { icon: '📍', label: 'Alerta General' },
+  1: { icon: '🩺', label: 'Médica' },
+  2: { icon: '🔥', label: 'Incendio' },
+  3: { icon: '🛡️', label: 'Seguridad' },
+  4: { icon: '💥', label: 'Accidente' },
+  5: { icon: '🌊', label: 'Desastre' },
+  6: { icon: '🧗', label: 'Rescate / Perdido' },
+  7: { icon: '⚠️', label: 'Otra Emergencia' }
+};
+
+const CHANNEL_ICONS = {
+  sms: '💬 WhatsApp / SMS',
+  email: '✉️ Correo',
+  voice: '📞 Llamada de voz IA',
+  llamada_voz: '📞 Llamada de voz IA'
+};
+
 // --- configuración -----------------------------------------------------------------------------
 
 const safe = (fn, dflt) => { try { return fn(); } catch { return dflt; } };
@@ -168,35 +186,67 @@ function renderStats() {
   const hops = open.map((i) => i.hops).filter((n) => Number.isInteger(n));
   const avg = hops.length ? (hops.reduce((a, b) => a + b, 0) / hops.length).toFixed(1) : '–';
   const notified = state.incidents.reduce((a, i) => a + (i.notified_count || 0), 0);
-  const flag = (name, on) => h('div', { class: `stat flag ${on ? 'on' : 'off'}`, title: 'Fases 4 y 5: simuladas (mock)' },
-    h('span', {}, name), h('b', {}, on === null || on === undefined ? '?' : on ? 'ON (mock)' : 'OFF'));
+  const flag = (icon, name, on) => h('div', { class: `stat flag ${on ? 'on' : 'off'}`, title: 'Fases 4 y 5: simuladas (mock)' },
+    h('span', {}, `${icon} ${name}`), h('b', {}, on === null || on === undefined ? '?' : on ? 'ON (mock)' : 'OFF'));
   clear($('stats')).append(
-    h('div', { class: 'stat' }, h('b', {}, open.length), h('span', {}, 'abiertos')),
-    h('div', { class: 'stat' }, h('b', {}, state.incidents.length), h('span', {}, 'total')),
-    h('div', { class: 'stat' }, h('b', {}, avg), h('span', {}, 'saltos prom.')),
-    h('div', { class: 'stat' }, h('b', {}, notified), h('span', {}, 'contactos avisados')),
-    flag('Pagos', state.features?.payments), flag('Rides', state.features?.rides),
+    h('div', { class: 'stat', title: 'Incidentes activos esperando rescate' }, h('b', { style: 'color:var(--sev3);' }, `🚨 ${open.length}`), h('span', {}, 'abiertos')),
+    h('div', { class: 'stat', title: 'Total de paquetes SOS registrados' }, h('b', {}, `📋 ${state.incidents.length}`), h('span', {}, 'total')),
+    h('div', { class: 'stat', title: 'Promedio de saltos Bluetooth requeridos para llegar al Egress' }, h('b', { style: 'color:var(--accent);' }, `📡 ${avg}`), h('span', {}, 'saltos prom.')),
+    h('div', { class: 'stat', title: 'Familiares y contactos de emergencia notificados' }, h('b', { style: 'color:var(--ok);' }, `👥 ${notified}`), h('span', {}, 'contactos avisados')),
+    flag('💳', 'Pagos', state.features?.payments), flag('🛵', 'Rides', state.features?.rides),
   );
 }
 
 function renderList() {
-  const list = clear($('list'));
   const items = visible();
+  const list = $('list');
   if (!items.length) {
-    list.append(h('li', { class: 'empty' }, state.ready ? 'Sin incidentes. Cuando un teléfono envíe un SOS, aparecerá aquí.' : 'Cargando…'));
+    state.lastListSig = '';
+    clear(list).append(h('li', { class: 'empty' }, state.ready ? 'Sin incidentes. Cuando un teléfono envíe un SOS, aparecerá aquí.' : 'Cargando…'));
     return;
   }
+
+  // Firma estricta: si los datos no cambiaron de fondo, solo actualizamos los tiempos relativos in-place para eliminar el parpadeo
+  const selKey = state.selected ? `${state.selected.sender_id}:${state.selected.incident_id}` : '';
+  const sig = items.map((i) => `${keyOf(i)}:${i.severity}:${i.status}:${i.hops}:${i.notified_count}:${i.public_text}`).join('|') + `::sel=${selKey}`;
+
+  if (state.lastListSig === sig && list.children.length === items.length) {
+    items.forEach((i, idx) => {
+      const card = list.children[idx]?.querySelector('.card');
+      const timeEl = card?.querySelector('.t small');
+      if (timeEl) timeEl.textContent = ago(i.updated_at);
+    });
+    return;
+  }
+
+  state.lastListSig = sig;
+  clear(list);
+
   for (const i of items) {
     const [label, color] = sevOf(i);
-    const sel = state.selected && keyOf(i) === `${state.selected.sender_id}:${state.selected.incident_id}`;
-    list.append(h('li', {}, h('button', { class: `card${sel ? ' sel' : ''}`, type: 'button', style: `--c:${color}`, onclick: () => select(i) },
-      h('div', { class: 't' }, h('span', {}, `${i.display_name ?? 'Usuario'} · ${i.category_label}`), h('small', {}, ago(i.updated_at))),
-      h('div', { class: 'txt' }, i.public_text || 'Sin texto'),
+    const k = keyOf(i);
+    const sel = selKey === k;
+    const cat = CAT_INFO[i.category] ?? { icon: '⚠️', label: i.category_label || 'Emergencia' };
+
+    list.append(h('li', { 'data-key': k }, h('button', {
+      class: `card${sel ? ' sel' : ''}`,
+      type: 'button',
+      style: `--c:${color}`,
+      onclick: () => select(i)
+    },
+      h('div', { class: 't' },
+        h('span', {}, `${cat.icon} ${i.display_name ?? 'Usuario'} · ${cat.label}`),
+        h('small', {}, ago(i.updated_at))
+      ),
+      h('div', { class: 'txt' }, i.public_text || 'Sin texto descriptivo'),
       h('div', { class: 'chips' },
-        h('span', { class: 'chip sev' }, i.status === 'closed' ? 'Cerrado' : `${label} · ${i.severity}/3`),
-        Number.isInteger(i.hops) && h('span', { class: 'chip' }, `${i.hops} ${i.hops === 1 ? 'salto' : 'saltos'}`),
-        h('span', { class: 'chip muted' }, `${i.notified_count} avisados`),
-        i.lat === null && h('span', { class: 'chip muted' }, 'sin ubicación')),
+        h('span', { class: 'chip sev' }, i.status === 'closed' ? '✅ Cerrado' : `🚨 ${label} · ${i.severity}/3`),
+        Number.isInteger(i.hops) && h('span', { class: 'chip' }, `📡 ${i.hops} ${i.hops === 1 ? 'salto' : 'saltos'}`),
+        h('span', { class: 'chip muted' }, `👥 ${i.notified_count} avisados`),
+        i.lat === null
+          ? h('span', { class: 'chip muted' }, '📍 Sin señal GPS')
+          : h('span', { class: 'chip' }, `📍 GPS ±${i.accuracy_m || 10}m`)
+      ),
     )));
   }
 }
@@ -290,7 +340,20 @@ function renderMap() {
         map.panTo([i.lat, i.lon], { animate: true, duration: 0.8 });
       }
     }
-    m.pin.bindTooltip(h('span', {}, `${i.display_name ?? 'Usuario'} · ${i.category_label}`), { direction: 'top', offset: [0, -10] });
+    const cat = CAT_INFO[i.category] ?? { icon: '⚠️', label: i.category_label || 'Emergencia' };
+    const [label, color] = sevOf(i);
+    const popupHtml = `
+      <div style="min-width:180px;">
+        <h4 style="font-size:13px; font-weight:700; margin:0 0 4px 0; color:#fff;">${cat.icon} ${i.display_name ?? 'Usuario'}</h4>
+        <p style="font-size:11.5px; color:#cbd5e1; margin:0 0 6px 0; line-height:1.35;">${i.public_text || 'Sin texto descriptivo'}</p>
+        <div style="display:flex; gap:5px; flex-wrap:wrap;">
+          <span style="font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px; background:${color}33; color:${color}; border:1px solid ${color}66;">${label} · ${i.severity}/3</span>
+          <span style="font-size:10px; padding:2px 7px; border-radius:999px; background:rgba(255,255,255,0.08); color:#e2e8f0;">📡 ${i.hops ?? 0} saltos</span>
+        </div>
+      </div>
+    `;
+    m.pin.bindPopup(popupHtml, { offset: [0, -10] });
+    m.pin.bindTooltip(h('span', {}, `${cat.icon} ${i.display_name ?? 'Usuario'} · ${cat.label}`), { direction: 'top', offset: [0, -10] });
   }
 
   for (const [k, m] of state.markers) {
@@ -310,11 +373,29 @@ function renderMap() {
   }
 }
 
+window.centerOnActiveIncident = () => {
+  if (!state.selected) return;
+  const k = `${state.selected.sender_id}:${state.selected.incident_id}`;
+  const i = state.incidents.find((x) => keyOf(x) === k);
+  if (i && i.lat !== null) {
+    map.flyTo([i.lat, i.lon], 16, { duration: 0.8 });
+    const m = state.markers.get(k);
+    if (m?.pin) m.pin.openPopup();
+  }
+};
+
 async function select(i) {
   state.selected = { sender_id: i.sender_id, incident_id: i.incident_id };
   state.detail = null;
   render();
-  if (i.lat !== null) map.flyTo([i.lat, i.lon], Math.max(map.getZoom(), 15), { duration: 0.8 });
+  if (i.lat !== null) {
+    map.flyTo([i.lat, i.lon], Math.max(map.getZoom(), 15), { duration: 0.8 });
+    const k = keyOf(i);
+    const m = state.markers.get(k);
+    if (m?.pin) m.pin.openPopup();
+  }
+  const btnRecenter = $('btn-map-recenter');
+  if (btnRecenter) btnRecenter.style.display = i.lat !== null ? 'inline-flex' : 'none';
   await loadDetail();
 }
 
@@ -322,10 +403,16 @@ async function select(i) {
 
 function pathView(i) {
   const relays = Number.isInteger(i.hops) ? Math.min(i.hops, 7) : 0;
-  const parts = [h('div', { class: 'node origin' }, h('i'), 'Origen')];
-  for (let n = 0; n < relays; n += 1) parts.push(h('div', { class: 'link hop' }), h('div', { class: 'node' }, h('i'), 'Relevo'));
-  parts.push(h('div', { class: 'link' }), h('div', { class: 'node' }, h('i'), 'Egress'),
-    h('div', { class: 'link' }), h('div', { class: 'node cloud' }, h('i'), 'Backend'));
+  const parts = [h('div', { class: 'node origin' }, h('i'), h('span', {}, '📱 Origen'))];
+  for (let n = 0; n < relays; n += 1) {
+    parts.push(h('div', { class: 'link hop' }), h('div', { class: 'node' }, h('i'), h('span', {}, `🔄 Salto ${n + 1}`)));
+  }
+  parts.push(
+    h('div', { class: 'link' }),
+    h('div', { class: 'node egress' }, h('i'), h('span', {}, '🌐 Egress')),
+    h('div', { class: 'link' }),
+    h('div', { class: 'node cloud' }, h('i'), h('span', {}, '☁️ Backend'))
+  );
   return h('div', { class: 'path' }, parts);
 }
 
@@ -333,15 +420,15 @@ function describe(e, names) {
   const d = e.data || {};
   const who = (idx) => names[idx] ?? `contacto ${idx}`;
   switch (e.kind) {
-    case 'incident_created': return ['SOS registrado', 'var(--sev3)'];
-    case 'incident_updated': return [d.status === 'closed' ? 'Incidente cerrado por el usuario' : 'Actualización del usuario (baliza)', 'var(--sev1)'];
-    case 'packet_received': return [`Llegó ${MSG_TYPES[d.msg_type] ?? 'paquete'} #${d.seq}${d.hops != null ? ` tras ${d.hops} ${d.hops === 1 ? 'salto' : 'saltos'}` : ''} por ${d.egress_id}`, 'var(--accent)'];
-    case 'mailbox': return [`${MSG_TYPES[d.msg_type] ?? 'Mensaje'} dejado en el buzón para el teléfono`, 'var(--violet)'];
-    case 'contacts_notified': return [`Aviso por ${CHANNELS[d.canal] ?? d.canal}: ${(d.enviados || []).map((x) => `${who(x.indice)} ${STATES[x.estado] ?? x.estado}`).join(', ') || 'nadie'}`, 'var(--ok)'];
-    case 'contact_reply': return [`${who(d.contact_idx)} respondió por ${CHANNELS[d.channel] ?? d.channel}`, 'var(--ok)'];
-    case 'command': return [`Comando ${d.cmd} (ref ${d.ref}): ${CMD_STATUS[d.status] ?? d.status}`, 'var(--warn)'];
-    case 'blob_unreadable': return ['No se pudo abrir el contenido sellado; se usó el aviso a todos los contactos', 'var(--bad)'];
-    case 'notification_status': return [`Entrega actualizada: ${STATES[d.status] ?? d.status}`, 'var(--ok)'];
+    case 'incident_created': return ['🚨 SOS inicial registrado en el sistema', 'var(--sev3)'];
+    case 'incident_updated': return [d.status === 'closed' ? '✅ Incidente cerrado por el usuario' : '🔄 Actualización del usuario (Baliza)', 'var(--sev1)'];
+    case 'packet_received': return [`📡 Llegó ${MSG_TYPES[d.msg_type] ?? 'paquete'} #${d.seq}${d.hops != null ? ` tras ${d.hops} ${d.hops === 1 ? 'salto' : 'saltos'}` : ''} por ${d.egress_id}`, 'var(--accent)'];
+    case 'mailbox': return [`📬 ${MSG_TYPES[d.msg_type] ?? 'Mensaje'} dejado en buzón para el teléfono`, 'var(--violet)'];
+    case 'contacts_notified': return [`👥 Aviso por ${CHANNEL_ICONS[d.canal] ?? d.canal}: ${(d.enviados || []).map((x) => `${who(x.indice)} (${STATES[x.estado] ?? x.estado})`).join(', ') || 'nadie'}`, 'var(--ok)'];
+    case 'contact_reply': return [`💬 ${who(d.contact_idx)} respondió por ${CHANNEL_ICONS[d.channel] ?? d.channel}`, 'var(--ok)'];
+    case 'command': return [`⚡ Comando ${d.cmd} (ref ${d.ref}): ${CMD_STATUS[d.status] ?? d.status}`, 'var(--warn)'];
+    case 'blob_unreadable': return ['⚠️ No se pudo abrir el contenido sellado; se usó aviso de emergencia a todos los contactos', 'var(--bad)'];
+    case 'notification_status': return [`📬 Estado de entrega actualizado: ${STATES[d.status] ?? d.status}`, 'var(--ok)'];
     default: return null;
   }
 }
@@ -357,12 +444,13 @@ async function adminPost(path, body, okText) {
 }
 
 function renderDetail() {
-  const el = clear($('detail'));
+  const el = $('detail');
   const d = state.detail;
   if (!state.selected || !d) {
-    el.append(state.selected
+    state.lastDetailSig = '';
+    clear(el).append(state.selected
       ? h('div', { class: 'sec' }, h('div', { class: 'skeleton' }))
-      : h('div', { class: 'empty' }, h('p', {}, 'Selecciona un incidente en la lista o en el mapa para ver su camino por el mesh, los avisos y la línea de tiempo.')));
+      : h('div', { class: 'empty' }, h('p', {}, '👆 Selecciona un incidente en la lista o en el mapa para ver su camino por el mesh, los avisos y la telemetría en tiempo real.')));
     return;
   }
   const i = d.incident;
@@ -370,55 +458,96 @@ function renderDetail() {
   const names = Object.fromEntries((d.contacts || []).map((c) => [c.idx, c.name]));
   const simulated = d.notifications.some((n) => n.state === 'simulated');
   const commands = d.events.filter((e) => e.kind === 'command');
+  const cat = CAT_INFO[i.category] ?? { icon: '⚠️', label: i.category_label || 'Emergencia' };
+
+  // Evita re-renderizado parpadeante si los datos del detalle no han cambiado
+  const detailSig = `${i.sender_id}:${i.incident_id}:${i.updated_at}:${d.events?.length}:${d.notifications?.length}:${d.notifications?.map(n=>n.state).join(',')}`;
+  if (state.lastDetailSig === detailSig && el.children.length > 0) {
+    const timeHead = el.querySelector('.d-head p');
+    if (timeHead) timeHead.textContent = `${cat.icon} ${cat.label} · ${ago(i.updated_at)} · ID ${i.incident_id}`;
+    return;
+  }
+  state.lastDetailSig = detailSig;
+  clear(el);
 
   el.append(
     h('div', { class: 'd-head' },
-      h('h2', {}, `${i.display_name ?? 'Usuario'} `, h('span', { class: 'chip sev', style: `--c:${color}` }, i.status === 'closed' ? 'Cerrado' : `${label} · ${i.severity}/3`)),
-      h('p', {}, `${i.category_label} · ${ago(i.updated_at)} · ID ${i.incident_id}`)),
+      h('h2', {}, `${cat.icon} ${i.display_name ?? 'Usuario'} `, h('span', { class: 'chip sev', style: `--c:${color}` }, i.status === 'closed' ? '✅ Cerrado' : `🚨 ${label} · ${i.severity}/3`)),
+      h('p', {}, `${cat.label} · ${ago(i.updated_at)} · ID ${i.incident_id}`)),
 
-    h('div', { class: 'sec' }, h('h3', {}, 'Camino del SOS por el mesh'), pathView(i),
-      h('p', { class: 'hint', style: 'margin-top:8px;color:var(--muted)' }, Number.isInteger(i.hops) ? `${i.hops} ${i.hops === 1 ? 'salto' : 'saltos'} hasta el egress${i.egress_id ? ` (${i.egress_id})` : ''}` : 'Saltos desconocidos')),
+    h('div', { class: 'sec' },
+      h('h3', {}, '📡 Camino del SOS por el Mesh (Bluetooth BLE)'),
+      h('p', { class: 'sec-explain' }, 'Telemetría de saltos de radio: el paquete de 418 bytes rebotó de teléfono en teléfono sin conexión hasta alcanzar el puente Egress.'),
+      pathView(i),
+      h('p', { class: 'hint', style: 'margin-top:10px; display:flex; align-items:center; gap:6px;' },
+        h('span', { style: 'color:var(--accent); font-weight:700;' }, '⚡ Salto:'),
+        Number.isInteger(i.hops) ? `${i.hops} ${i.hops === 1 ? 'salto de radio' : 'saltos de radio'} hasta el nodo con internet${i.egress_id ? ` (${i.egress_id})` : ''}` : 'Saltos desconocidos')
+    ),
 
-    h('div', { class: 'sec' }, h('h3', {}, 'Situación'),
+    h('div', { class: 'sec' },
+      h('h3', {}, '📍 Situación y Telemetría'),
+      h('p', { class: 'sec-explain' }, 'Datos públicos compartidos por radio para socorro local por vecinos o brigadistas. La nota confidencial viaja sellada de extremo a extremo.'),
       h('dl', { class: 'kv' },
-        h('dt', {}, 'Texto público'), h('dd', {}, i.public_text || '–'),
-        h('dt', {}, 'Ubicación'), h('dd', {}, i.lat === null ? 'Sin ubicación' : `${i.lat.toFixed(5)}, ${i.lon.toFixed(5)}`),
-        h('dt', {}, 'Precisión'), h('dd', {}, i.lat === null ? '–' : `±${i.accuracy_m} m · fix de hace ${i.location_age_s} s`),
-        h('dt', {}, 'Recibido'), h('dd', {}, `${clock(i.created_at)} (${ago(i.created_at)})`)),
-      i.note && h('div', { class: 'note' }, i.note)),
+        h('dt', {}, '📝 Texto público'), h('dd', {}, i.public_text || '–'),
+        h('dt', {}, '🌍 Coordenadas'), h('dd', {}, i.lat === null ? 'Sin ubicación' : [
+          h('span', {}, `${i.lat.toFixed(5)}, ${i.lon.toFixed(5)}`),
+          h('button', {
+            class: 'btn sm primary',
+            type: 'button',
+            style: 'padding: 2px 9px; font-size: 11px; margin-left: 6px;',
+            onclick: () => window.centerOnActiveIncident()
+          }, '🎯 Centrar en mapa')
+        ]),
+        h('dt', {}, '🎯 Precisión GPS'), h('dd', {}, i.lat === null ? '–' : `±${i.accuracy_m} m · fix de hace ${i.location_age_s} s`),
+        h('dt', {}, '⏱️ Recibido'), h('dd', {}, `${clock(i.created_at)} (${ago(i.created_at)})`)),
+      i.note && h('div', { class: 'note' },
+        h('b', { style: 'color:var(--accent); display:block; margin-bottom:3px;' }, '🔒 Nota Médica Confidencial:'),
+        i.note
+      )
+    ),
 
-    h('div', { class: 'sec' }, h('h3', {}, 'Avisos a contactos', h('span', {}, `${i.notified_count} avisados`)),
-      simulated && h('div', { class: 'mock' }, 'Hay avisos simulados: no hay proveedor de mensajería configurado en el backend.'),
+    h('div', { class: 'sec' },
+      h('h3', {}, '👥 Avisos a Contactos de Emergencia', h('span', {}, `${i.notified_count} avisados`)),
+      h('p', { class: 'sec-explain' }, 'Agente autónomo: notifica en paralelo vía WhatsApp, SMS, llamadas de voz con IA y correo electrónico.'),
+      simulated && h('div', { class: 'mock' }, 'ℹ️ Modo Demostración: Los avisos se simulan localmente porque no hay credenciales de mensajería o telefonía configuradas en este entorno.'),
       d.notifications.length
         ? h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'Contacto'), h('th', {}, 'Canal'), h('th', {}, 'Estado'), h('th', {}, ''))),
           h('tbody', {}, d.notifications.map((n) => h('tr', {},
-            h('td', {}, names[n.contact_idx] ?? `#${n.contact_idx}`), h('td', {}, CHANNELS[n.channel] ?? n.channel),
+            h('td', {}, names[n.contact_idx] ?? `#${n.contact_idx}`),
+            h('td', {}, CHANNEL_ICONS[n.channel] ?? n.channel),
             h('td', {}, h('span', { class: `badge ${n.state}`, title: n.detail || '' }, STATES[n.state] ?? n.state)),
-            h('td', {}, cfg.admin && n.state === 'skipped_unverified' && h('button', { class: 'btn', type: 'button',
+            h('td', {}, cfg.admin && n.state === 'skipped_unverified' && h('button', { class: 'btn sm', type: 'button',
               onclick: () => adminPost('/v1/admin/contacts/verify', { sender_id: i.sender_id, index: n.contact_idx }, 'Contacto verificado') }, 'Verificar'))))))
-        : h('p', { class: 'hint', style: 'color:var(--muted)' }, 'Aún no se avisó a nadie.'),
-      h('div', { style: 'margin-top: 10px; display: flex; flex-direction: column; gap: 6px;' },
+        : h('p', { class: 'hint', style: 'color:var(--muted)' }, 'Aún no se avisó a ningún contacto.'),
+      h('div', { style: 'margin-top: 12px; display: flex; flex-direction: column; gap: 8px;' },
         h('button', {
           class: 'btn primary',
           style: 'width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; font-size: 13px;',
           type: 'button',
           onclick: () => showQrModal(d)
         }, '📱 Ver Opciones / QR para el Jurado')),
-      cfg.admin && d.notifications.length > 0 && replyForm(i, d.notifications[0].contact_idx)),
+      cfg.admin && d.notifications.length > 0 && replyForm(i, d.notifications[0].contact_idx)
+    ),
 
-    h('div', { class: 'sec' }, h('h3', {}, 'Comandos (Fases 4 y 5, Yummy & Pagos)'),
+    h('div', { class: 'sec' },
+      h('h3', {}, '⚡ Comandos Offline (Movilidad y Logística de Asistencia)'),
+      h('p', { class: 'sec-explain' }, 'Capacidades de contingencia: el usuario sin datos puede solicitar traslado de auxilio médico o suministros vía comando firmado.'),
       commands.length
         ? commands.map((e) => h('div', { class: 'mock' }, `[MOCK] ${e.data.cmd} · ref ${e.data.ref} · ${CMD_STATUS[e.data.status] ?? e.data.status}`))
-        : h('p', { class: 'hint', style: 'color:var(--muted)' }, 'Sin comandos aún.'),
+        : h('p', { class: 'hint', style: 'color:var(--muted)' }, 'Sin comandos solicitados por el usuario aún.'),
       h('button', { class: 'btn primary', style: 'margin-top: 10px; width: 100%; font-size: 13px;', type: 'button',
-        onclick: () => adminPost('/v1/dev/dispatch-ride', { sender_id: i.sender_id, incident_id: i.incident_id, destino: 'Punto de Asistencia Chacao / Altamira' }, '🛵 Yummy Ride de Asistencia despachado') },
-        '🛵 Despachar Yummy Ride de Asistencia')),
+        onclick: () => adminPost('/v1/dev/dispatch-ride', { sender_id: i.sender_id, incident_id: i.incident_id, destino: 'Punto de Asistencia Táctica / Altamira' }, '🚑 Unidad de Asistencia despachada') },
+        '🚑 Despachar Unidad de Asistencia')
+    ),
 
-    h('div', { class: 'sec' }, h('h3', {}, 'Línea de tiempo'),
+    h('div', { class: 'sec' },
+      h('h3', {}, '⏱️ Bitácora de Eventos en Tiempo Real'),
+      h('p', { class: 'sec-explain' }, 'Historial inmutable con cada paquete, acuse de recibo (ACK) y respuestas recibidas.'),
       h('ol', { class: 'timeline' }, [...d.events].reverse().map((e) => {
         const info = describe(e, names);
         return info && h('li', { style: `--c:${info[1]}` }, h('time', {}, `${clock(e.at)} · ${ago(e.at)}`), info[0]);
-      }))),
+      }))
+    ),
   );
 }
 
@@ -554,6 +683,20 @@ $('btn-close-qr')?.addEventListener('click', () => $('dlg-qr')?.close());
 $('btn-close-qr-top')?.addEventListener('click', () => $('dlg-qr')?.close());
 $('dlg-qr')?.addEventListener('click', (e) => {
   if (e.target === $('dlg-qr')) $('dlg-qr').close();
+});
+
+// --- modal glosario / diccionario -----------------------------------------------------------------
+const dlgGlossary = $('dlg-glossary');
+$('btn-glossary')?.addEventListener('click', () => dlgGlossary?.showModal());
+$('btn-close-glossary')?.addEventListener('click', () => dlgGlossary?.close());
+$('btn-close-glossary-bottom')?.addEventListener('click', () => dlgGlossary?.close());
+dlgGlossary?.addEventListener('click', (e) => {
+  if (e.target === dlgGlossary) dlgGlossary.close();
+});
+
+// --- botón flotante recentrar en mapa -------------------------------------------------------------
+$('btn-map-recenter')?.addEventListener('click', () => {
+  if (window.centerOnActiveIncident) window.centerOnActiveIncident();
 });
 
 start();

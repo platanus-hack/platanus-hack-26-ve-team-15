@@ -1,0 +1,198 @@
+/* ========================================================================== */
+/*  5. TACTICAL MAP, RADAR PINS & RE-CENTER BUTTON                            */
+/* ========================================================================== */
+
+.map-wrap {
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  min-height: 320px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+#map {
+  position: absolute;
+  inset: 0;
+  background: #060911;
+}
+
+/* Floating Re-Center Button on Map */
+.map-recenter-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 450;
+  background: rgba(13, 19, 34, 0.9);
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  color: #67e8f9;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: 999px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 16px rgba(6, 182, 212, 0.25);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.map-recenter-btn:hover {
+  background: rgba(20, 30, 55, 0.95);
+  border-color: #67e8f9;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6), 0 0 24px rgba(6, 182, 212, 0.4);
+}
+
+.map-recenter-btn:active {
+  transform: scale(0.96);
+}
+
+/* Legend Floating Bar */
+.legend {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  z-index: 450;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  background: rgba(6, 8, 13, 0.88);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  padding: 6px 14px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+}
+
+.legend i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
+.legend .acc i {
+  background: transparent;
+  border: 1.5px dashed var(--accent);
+}
+
+/* Leaflet Dark Customization */
+.leaflet-container {
+  font-family: var(--font-sans) !important;
+  background: #060911 !important;
+}
+
+.leaflet-control-attribution {
+  background: rgba(6, 8, 13, 0.8) !important;
+  color: var(--dim) !important;
+  font-size: 9.5px !important;
+  backdrop-filter: blur(6px);
+}
+
+.leaflet-control-attribution a {
+  color: var(--muted) !important;
+}
+
+.leaflet-bar {
+  border: 1px solid var(--border) !important;
+  border-radius: 10px !important;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45) !important;
+}
+
+.leaflet-bar a {
+  background: rgba(13, 19, 34, 0.88) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+  backdrop-filter: blur(12px);
+  transition: all 0.2s ease;
+}
+
+.leaflet-bar a:hover {
+  background: rgba(30, 44, 75, 0.98) !important;
+  color: #fff !important;
+}
+
+/* Tactical Beacon Pins */
+.pin {
+  position: relative;
+  width: 26px;
+  height: 26px;
+}
+
+.pin b {
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: var(--c);
+  box-shadow: 0 0 16px var(--c);
+  border: 2px solid #ffffff;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pin.open::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid var(--c);
+  animation: ping 2.2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+
+.pin.sel b {
+  transform: scale(1.4);
+  box-shadow: 0 0 28px var(--c);
+}
+
+/* Leaflet Popups in Dark Theme */
+.leaflet-popup-content-wrapper {
+  background: rgba(13, 19, 34, 0.95) !important;
+  color: #fff !important;
+  border: 1px solid rgba(6, 182, 212, 0.35) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(14px) !important;
+  font-family: var(--font-sans) !important;
+}
+
+.leaflet-popup-tip {
+  background: rgba(13, 19, 34, 0.95) !important;
+  border: 1px solid rgba(6, 182, 212, 0.35) !important;
+}
+
+.leaflet-popup-content {
+  margin: 12px 14px !important;
+  line-height: 1.4 !important;
+}
+
+.leaflet-popup-content h4 {
+  font-size: 13.5px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  color: #fff;
+}
+
+.leaflet-popup-content p {
+  font-size: 12px;
+  color: #cbd5e1;
+  margin: 0 0 6px 0;
+}
+
+.leaflet-popup-content .popup-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  display: inline-block;
+}

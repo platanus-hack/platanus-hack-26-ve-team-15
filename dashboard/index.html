@@ -6,6 +6,9 @@
   <title>Baliza Vital · Panel de incidentes</title>
   <meta name="description" content="Mapa en vivo de incidentes SOS que llegan por el mesh Bluetooth.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='6' fill='%23ef4444'/%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='%23ef4444' stroke-width='2' opacity='.5'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="vendor/leaflet.css">
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -25,29 +28,57 @@
         <button type="button" class="mode-btn" id="btn-mode-real" data-mode="real">🔴 En Vivo Real</button>
       </div>
       <span class="conn" id="conn" data-state="connecting"><i></i><span>Conectando…</span></span>
-      <button class="btn ghost" id="btn-settings" type="button">Ajustes</button>
+      <a class="btn ghost" href="/preview-app.html" target="_blank" rel="noopener" style="text-decoration:none;">📱 App Móvil</a>
+      <button class="btn ghost" id="btn-glossary" type="button">📖 Glosario</button>
+      <button class="btn ghost" id="btn-settings" type="button">⚙️ Ajustes</button>
     </div>
   </header>
 
   <div class="mode-banner demo-banner" id="mode-banner">
     <div class="banner-content" id="banner-demo-view">
-      <span class="badge-mode demo">MODO DEMOSTRACIÓN</span>
-      <span class="banner-text">Simulaciones de telemetría y mesh para demostración a jurados sin despachar llamadas reales.</span>
+      <span class="badge-mode demo">🧪 MODO DEMOSTRACIÓN</span>
+      <div class="ticker-container" aria-label="Telemetría en vivo">
+        <div class="ticker-track">
+          <span class="ticker-item"><span class="dot"></span> <b>MALLA BLE:</b> Enlace ad-hoc descentralizado entre dispositivos sin conexión celular</span>
+          <span class="ticker-item"><span class="dot"></span> <b>NODO EGRESS:</b> Detección y subida automática por dispositivos puente con internet</span>
+          <span class="ticker-item"><span class="dot"></span> <b>CRIPTOGRAFÍA ASIMÉTRICA:</b> Paquetes sellados Ed25519 de 418 bytes sin fragmentación de radio</span>
+          <span class="ticker-item"><span class="dot"></span> <b>DESPACHO MULTICANAL:</b> Avisos inmediatos a contactos vía mensajería, voz con IA y correo</span>
+          <span class="ticker-item"><span class="dot"></span> <b>LOGÍSTICA EN CONTINGENCIA:</b> Telemetría táctica y auxilio para brigadas de rescate</span>
+          <span class="ticker-item"><span class="dot"></span> <b>GARANTÍA HONESTA:</b> Acuse criptográfico (ACK) firmado por el servidor central</span>
+          <span class="ticker-item"><span class="dot"></span> <b>MALLA BLE:</b> Enlace ad-hoc descentralizado entre dispositivos sin conexión celular</span>
+          <span class="ticker-item"><span class="dot"></span> <b>NODO EGRESS:</b> Detección y subida automática por dispositivos puente con internet</span>
+          <span class="ticker-item"><span class="dot"></span> <b>CRIPTOGRAFÍA ASIMÉTRICA:</b> Paquetes sellados Ed25519 de 418 bytes sin fragmentación de radio</span>
+          <span class="ticker-item"><span class="dot"></span> <b>DESPACHO MULTICANAL:</b> Avisos inmediatos a contactos vía mensajería, voz con IA y correo</span>
+          <span class="ticker-item"><span class="dot"></span> <b>LOGÍSTICA EN CONTINGENCIA:</b> Telemetría táctica y auxilio para brigadas de rescate</span>
+          <span class="ticker-item"><span class="dot"></span> <b>GARANTÍA HONESTA:</b> Acuse criptográfico (ACK) firmado por el servidor central</span>
+        </div>
+      </div>
       <div class="banner-actions">
-        <button type="button" class="btn sm" id="btn-demo-mov">🚶 Simular Desplazamiento Chacao</button>
-        <button type="button" class="btn sm ghost" id="btn-demo-clear">🧹 Limpiar Datos Demo</button>
+        <button type="button" class="btn sm" id="btn-demo-mov">🚶 Simular Desplazamiento</button>
+        <button type="button" class="btn sm ghost" id="btn-demo-clear">🧹 Limpiar Demo</button>
       </div>
     </div>
     <div class="banner-content" id="banner-real-view" style="display: none;">
       <span class="badge-mode real">🔴 CENTRO DE OPERACIONES EN VIVO</span>
-      <span class="banner-text">Monitoreando red física. Recibiendo paquetes de teléfonos Android conectados por Bluetooth/Mesh.</span>
+      <div class="ticker-container" aria-label="Telemetría real">
+        <div class="ticker-track">
+          <span class="ticker-item"><span class="dot" style="background:#f43f5e; box-shadow:0 0 10px #f43f5e;"></span> <b>TELEMETRÍA FÍSICA:</b> Escuchando paquetes SOS de radio Bluetooth BLE en tiempo real</span>
+          <span class="ticker-item"><span class="dot" style="background:#10b981; box-shadow:0 0 10px #10b981;"></span> <b>VALIDACIÓN CRIPTOGRÁFICA:</b> Verificación inmutable de firmas digitales Ed25519</span>
+          <span class="ticker-item"><span class="dot" style="background:#38bdf8; box-shadow:0 0 10px #38bdf8;"></span> <b>PUENTES ACTIVOS:</b> Reenvío oportunista hacia la nube sin consumo de datos celulares</span>
+          <span class="ticker-item"><span class="dot" style="background:#10b981; box-shadow:0 0 10px #10b981;"></span> <b>DESPACHO INMEDIATO:</b> Notificación paralela a la red de soporte del usuario</span>
+          <span class="ticker-item"><span class="dot" style="background:#f43f5e; box-shadow:0 0 10px #f43f5e;"></span> <b>TELEMETRÍA FÍSICA:</b> Escuchando paquetes SOS de radio Bluetooth BLE en tiempo real</span>
+          <span class="ticker-item"><span class="dot" style="background:#10b981; box-shadow:0 0 10px #10b981;"></span> <b>VALIDACIÓN CRIPTOGRÁFICA:</b> Verificación inmutable de firmas digitales Ed25519</span>
+          <span class="ticker-item"><span class="dot" style="background:#38bdf8; box-shadow:0 0 10px #38bdf8;"></span> <b>PUENTES ACTIVOS:</b> Reenvío oportunista hacia la nube sin consumo de datos celulares</span>
+          <span class="ticker-item"><span class="dot" style="background:#10b981; box-shadow:0 0 10px #10b981;"></span> <b>DESPACHO INMEDIATO:</b> Notificación paralela a la red de soporte del usuario</span>
+        </div>
+      </div>
     </div>
   </div>
 
   <main class="layout">
     <aside class="panel list-panel" aria-label="Incidentes">
       <div class="panel-head">
-        <h2>Incidentes</h2>
+        <h2>🚨 Incidentes</h2>
         <div class="seg" role="tablist" aria-label="Filtro">
           <button type="button" role="tab" class="on" data-filter="open">Abiertos</button>
           <button type="button" role="tab" data-filter="all">Todos</button>
@@ -58,6 +89,7 @@
 
     <section class="map-wrap" aria-label="Mapa en vivo">
       <div id="map"></div>
+      <button class="map-recenter-btn" id="btn-map-recenter" type="button" style="display:none;">🎯 Centrar en emergencia</button>
       <div class="legend" aria-hidden="true">
         <span><i style="background:var(--sev3)"></i>Grave</span>
         <span><i style="background:var(--sev2)"></i>Alta</span>
@@ -97,6 +129,7 @@
         <button class="btn ghost" value="cancel" type="submit">Cancelar</button>
         <button class="btn primary" value="save" type="submit">Guardar y reconectar</button>
       </div>
+    </form>
   </dialog>
 
   <dialog id="dlg-qr">
@@ -131,6 +164,58 @@
 
       <div class="qr-actions">
         <button class="btn primary" id="btn-close-qr" type="button" style="width:100%;">Cerrar</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="dlg-glossary">
+    <div class="glossary-modal">
+      <div class="glossary-header">
+        <h2>📖 Diccionario de Baliza Vital</h2>
+        <button class="btn ghost" id="btn-close-glossary" type="button" style="padding:4px 9px; font-size:14px; min-width:auto;">✕</button>
+      </div>
+      <p class="glossary-subtitle">Conceptos técnicos esenciales para entender la arquitectura del mesh y la respuesta a emergencias sin conexión.</p>
+      
+      <div class="glossary-grid">
+        <div class="glossary-card">
+          <h4>📡 Salto (Hop)</h4>
+          <p>Rebote de radio Bluetooth BLE entre dos dispositivos cercanos. El mensaje avanza de teléfono en teléfono hasta alcanzar a un usuario con internet.</p>
+          <span class="tech-tag">Bitchat BLE · TTL inicial 7</span>
+        </div>
+        
+        <div class="glossary-card">
+          <h4>🌐 Nodo Egress</h4>
+          <p>Teléfono que tiene conexión celular o WiFi. Actúa como puente que sube el paquete SOS del mesh hacia el servidor central.</p>
+          <span class="tech-tag">POST /v1/egress · Store & Forward</span>
+        </div>
+
+        <div class="glossary-card">
+          <h4>🔒 Caja Sellada (Sealed Blob)</h4>
+          <p>Cifrado asimétrico anónimo. Los nodos que retransmiten solo ven que hay un SOS y su posición pública; la nota médica confidencial solo la abre el servidor.</p>
+          <span class="tech-tag">crypto_box_seal (X25519)</span>
+        </div>
+
+        <div class="glossary-card">
+          <h4>📋 Acuse de Recibo (ACK)</h4>
+          <p>Garantía de entrega honesta. La app del emisor nunca muestra "entregado" sin una confirmación firmada digitalmente por la clave del servidor.</p>
+          <span class="tech-tag">Firma Ed25519 · Cero falsa alarma</span>
+        </div>
+
+        <div class="glossary-card">
+          <h4>⚡ Movilidad y Pagos (Fases 4 y 5)</h4>
+          <p>Capacidades de contingencia para superapps: permiten solicitar traslado de asistencia médica o recargar saldo en zonas sin señal ni saldo.</p>
+          <span class="tech-tag">Comandos firmados · Rescate offline</span>
+        </div>
+
+        <div class="glossary-card">
+          <h4>📍 Baliza Periódica</h4>
+          <p>Actualización periódica de coordenadas (UPDATE) que emite el teléfono para que los rescatistas sepan dónde buscar aunque la persona se mueva.</p>
+          <span class="tech-tag">Radio dinámico · Celda geohash</span>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+        <button class="btn primary" id="btn-close-glossary-bottom" type="button">Entendido</button>
       </div>
     </div>
   </dialog>
