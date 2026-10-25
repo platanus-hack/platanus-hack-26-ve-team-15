@@ -34,6 +34,8 @@ class BluetoothGattServerManager(
         // Self-healing advertising recovery tuning
         private const val ADVERTISE_RETRY_BASE_MS = 3_000L      // base backoff for transient advertise failures
         private const val ADVERTISE_MAX_RETRY_DELAY_MS = 30_000L // cap on backoff delay
+        // A client that never subscribes can write to us but never hear us: the link works one way only
+        private const val SUBSCRIBE_DEADLINE_MS = 10_000L
     }
     
     // Core Bluetooth components
@@ -45,6 +47,9 @@ class BluetoothGattServerManager(
     // GATT server for peripheral mode
     private var gattServer: BluetoothGattServer? = null
     private val serverLinkIDs = ConcurrentHashMap<String, String>()
+    // When each server link came up (linkID -> millis), and the links already dropped for never subscribing
+    private val serverLinkSince = ConcurrentHashMap<String, Long>()
+    private val droppedUnsubscribed = ConcurrentHashMap.newKeySet<String>()
     private var characteristic: BluetoothGattCharacteristic? = null
     private var advertiseCallback: AdvertiseCallback? = null
     private var advertiseRetryCount = 0
@@ -155,6 +160,28 @@ class BluetoothGattServerManager(
     /**
      * Get GATT server instance
      */
+    /**
+     * Everything we send to a client of our server goes out as a notification, so a client that writes to us
+     * but never subscribed hears nothing back while we still hear it. Seen in the field: a relay forwarded
+     * SOS retries to the egress, but the egress's ACKs never reached it. Called on each write from a client:
+     * once the link is older than [SUBSCRIBE_DEADLINE_MS] and still unsubscribed, it is dropped so the client
+     * reconnects and subscribes again. Left alone if we also hold a client link to it (we reach it that way).
+     */
+    private fun dropIfOneWay(device: BluetoothDevice, linkID: String) {
+        val address = device.address
+        val since = serverLinkSince[linkID] ?: return
+        if (System.currentTimeMillis() - since < SUBSCRIBE_DEADLINE_MS) return
+        if (connectionTracker.getSubscribedDevices().any { it.address == address }) return
+        if (connectionTracker.getConnectedDevices()[address]?.isClient == true) return
+        if (!droppedUnsubscribed.add(linkID)) return
+        Log.w(TAG, "Server: $address writes to us but never subscribed, disconnecting it")
+        connectionScope.launch {
+            try { gattServer?.cancelConnection(device) } catch (e: SecurityException) {
+                Log.w(TAG, "Server: cannot disconnect $address: ${e.message}")
+            }
+        }
+    }
+
     fun getGattServer(): BluetoothGattServer? = gattServer
     
     /**
@@ -199,10 +226,12 @@ class BluetoothGattServerManager(
                                 delegate?.onDeviceConnected(device)
                             }
                         }
+                        serverLinkSince[linkID] = System.currentTimeMillis()
                     }
                     BluetoothProfile.STATE_DISCONNECTED -> {
                         Log.i(TAG, "Disconnected from ${device.address} (server)")
                         val linkID = serverLinkIDs.remove(device.address)
+                        linkID?.let { serverLinkSince.remove(it); droppedUnsubscribed.remove(it) }
                         // Capture the observed peer before cleanup drops the address mapping.
                         val disconnectedPeerID = connectionTracker.addressPeerMap[device.address]
                         if (linkID != null) {
@@ -254,6 +283,7 @@ class BluetoothGattServerManager(
                         }
                         return
                     }
+                    dropIfOneWay(device, linkID)
                     val packet = BitchatPacket.fromBinaryData(value)
                     if (packet != null) {
                         val peerID = packet.senderID.take(8).toByteArray().joinToString("") { "%02x".format(it) }
@@ -283,6 +313,7 @@ class BluetoothGattServerManager(
                 }
 
                 if (BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE.contentEquals(value)) {
+                    Log.d(TAG, "Server: ${device.address} subscribed")
                     connectionTracker.addSubscribedDevice(device)
 
                     connectionScope.launch {

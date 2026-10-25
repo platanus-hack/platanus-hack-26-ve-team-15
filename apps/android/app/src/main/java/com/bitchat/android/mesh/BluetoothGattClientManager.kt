@@ -37,6 +37,9 @@ class BluetoothGattClientManager(
         private const val SCAN_MAX_RETRY_DELAY_MS = 30_000L    // cap on backoff delay
         private const val SCAN_WATCHDOG_INTERVAL_MS = 30_000L  // how often to verify the scanner is alive
         private const val SCAN_STALE_RESULT_MS = 120_000L      // force a scan restart if no results for this long
+        // Subscribing to notifications: without it the link is one way (we write, we never hear the server)
+        private const val SUBSCRIBE_MAX_ATTEMPTS = 5
+        private const val SUBSCRIBE_RETRY_BASE_MS = 300L
     }
     
     // Core Bluetooth components
@@ -465,8 +468,38 @@ class BluetoothGattClientManager(
         val deviceAddress = device.address
         val linkID = UUID.randomUUID().toString()
         Log.d(TAG, "Connecting to bitchat device: $deviceAddress (peerID: $peerID)")
+        val subscribeAttempts = java.util.concurrent.atomic.AtomicInteger(0)
+        val linkClosed = java.util.concurrent.atomic.AtomicBoolean(false)
 
         val gattCallback = object : BluetoothGattCallback() {
+            /**
+             * Asks the server to notify us. The request can be refused (the GATT queue is busy) or fail later
+             * (onDescriptorWrite), and nothing reported it: the link stayed up but one way only, so whatever
+             * this peer relayed back never arrived. Retry with backoff, and drop the link if it never works
+             * so the next connection starts clean.
+             */
+            fun subscribe(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor) {
+                if (linkClosed.get()) return
+                descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                val queued = try { gatt.writeDescriptor(descriptor) } catch (e: Exception) { false }
+                if (!queued) retrySubscribe(gatt, descriptor, "request refused")
+            }
+
+            fun retrySubscribe(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, why: String) {
+                if (linkClosed.get()) return
+                val attempt = subscribeAttempts.incrementAndGet()
+                if (attempt >= SUBSCRIBE_MAX_ATTEMPTS) {
+                    Log.w(TAG, "Client: could not subscribe to $deviceAddress ($why) after $attempt attempts, disconnecting")
+                    try { gatt.disconnect() } catch (_: Exception) { }
+                    return
+                }
+                Log.d(TAG, "Client: subscribe to $deviceAddress failed ($why), retry $attempt")
+                connectionScope.launch {
+                    delay(SUBSCRIBE_RETRY_BASE_MS * attempt)
+                    subscribe(gatt, descriptor)
+                }
+            }
+
             override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
                 if (newState == BluetoothProfile.STATE_CONNECTED && status == BluetoothGatt.GATT_SUCCESS) {
                     // Request a larger MTU. Must be done before any data transfer.
@@ -475,6 +508,7 @@ class BluetoothGattClientManager(
                         gatt.requestMtu(517)
                     }
                 } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                    linkClosed.set(true)
                     if (status != BluetoothGatt.GATT_SUCCESS) {
                         Log.w(TAG, "Disconnected from $deviceAddress with error status $status (client)")
                     } else {
@@ -539,8 +573,7 @@ class BluetoothGattClientManager(
                             gatt.setCharacteristicNotification(characteristic, true)
                             val descriptor = characteristic.getDescriptor(AppConstants.Mesh.Gatt.DESCRIPTOR_UUID)
                             if (descriptor != null) {
-                                descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-                                gatt.writeDescriptor(descriptor)
+                                subscribe(gatt, descriptor)
                                 
                                 connectionScope.launch {
                                     delay(200)
@@ -573,6 +606,15 @@ class BluetoothGattClientManager(
                     delegate?.onPacketReceived(packet, peerID, gatt.device, linkID)
                 } else {
                     Log.d(TAG, "Failed to parse packet from ${gatt.device.address}, size: ${value.size} bytes")
+                }
+            }
+
+            override fun onDescriptorWrite(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
+                if (descriptor.uuid != AppConstants.Mesh.Gatt.DESCRIPTOR_UUID) return
+                if (status == BluetoothGatt.GATT_SUCCESS) {
+                    Log.d(TAG, "Client: subscribed to $deviceAddress")
+                } else {
+                    retrySubscribe(gatt, descriptor, "status $status")
                 }
             }
 
