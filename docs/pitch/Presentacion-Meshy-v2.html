@@ -29,7 +29,8 @@
   p.sub { font-size: clamp(1.2rem, 2.4vw, 2.1rem); color: var(--muted); max-width: 60ch; line-height: 1.35; }
   .tag { background: var(--accent); color: #fff; font-weight: 600; letter-spacing: .08em;
     padding: .35em .9em; font-size: clamp(.9rem, 1.6vw, 1.4rem); }
-  .logo { max-height: 52vh; max-width: 70vw; width: auto; height: auto; }
+  /* logo en línea (project-logo-meshy-d.svg): la presentación no depende de archivos externos */
+  .logo { height: 52vh; max-width: 70vw; width: auto; flex: none; }
 
   /* diagrama del mesh */
   .mesh { display: flex; align-items: center; justify-content: center; gap: 1.2vw; flex-wrap: nowrap; width: 100%; }
@@ -65,7 +66,26 @@
 <!-- 0 · saludo -->
 <section class="slide on" data-notes="Hola, somos el equipo 15. [Presentar a cada integrante en una frase.] Construimos Meshy: un SOS que sale de tu teléfono aunque no tengas internet. (5 s)">
   <span class="tag">PLATANUS HACK 26 · CARACAS · EQUIPO 15</span>
-  <img class="logo" src="../../project-logo.png" alt="Meshy">
+  <svg class="logo" viewBox="0 0 1000 1000" role="img" aria-label="Meshy">
+    <rect width="1000" height="1000" fill="#111111"/>
+    <!-- Icono de app: una M formada por nodos del mesh; el último nodo (con internet) brilla -->
+    <rect x="207" y="97" width="586" height="586" rx="124" fill="#1C1C1E" stroke="#E53935" stroke-width="14"/>
+    <g fill="none" stroke="#3A3A3F" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M300 560 L300 250 L500 440 L700 250"/>
+      <path d="M700 250 L700 560" stroke="#E53935"/>
+    </g>
+    <g fill="#F2F2F2" stroke="#1C1C1E" stroke-width="12">
+      <circle cx="300" cy="560" r="30"/>
+      <circle cx="300" cy="250" r="30"/>
+      <circle cx="500" cy="440" r="30"/>
+      <circle cx="700" cy="250" r="30"/>
+    </g>
+    <circle cx="700" cy="560" r="78" fill="#E53935" opacity="0.16"/>
+    <circle cx="700" cy="560" r="44" fill="#E53935" stroke="#1C1C1E" stroke-width="12"/>
+    <circle cx="700" cy="560" r="14" fill="#FFFFFF"/>
+    <text x="500" y="850" text-anchor="middle" font-family="Adwaita Sans, Cantarell, DejaVu Sans, sans-serif" font-weight="300" font-size="170" letter-spacing="-2" fill="#F2F2F2">mesh<tspan font-weight="700" fill="#E53935">y</tspan></text>
+    <text x="500" y="930" text-anchor="middle" font-family="Adwaita Sans, Cantarell, DejaVu Sans, sans-serif" font-size="34" letter-spacing="5" fill="#A0A0A6">SOS SIN INTERNET</text>
+  </svg>
   <p class="sub">Un SOS que sale de tu teléfono aunque no haya internet.</p>
 </section>
 
