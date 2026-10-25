@@ -34,13 +34,13 @@ const stored = safe(() => JSON.parse(localStorage.getItem('baliza.cfg') || '{}')
 const params = new URLSearchParams(location.search);
 const cfg = {
   api: (params.get('api') || stored.api || window.BALIZA_CONFIG?.api || '').replace(/\/$/, ''),
-  token: params.get('token') || stored.token || '',
-  admin: stored.admin || '',
+  token: params.get('token') || stored.token || window.BALIZA_CONFIG?.token || '',
+  admin: params.get('admin') || stored.admin || window.BALIZA_CONFIG?.admin || '',
   mapProvider: params.get('map') || stored.mapProvider || 'esri',
   cartoKey: params.get('cartoKey') || stored.cartoKey || '',
 };
 
-const state = { incidents: [], filter: 'open', mode: 'demo', selected: null, detail: null, features: null, markers: new Map(), tracks: new Map(), es: null, ready: false };
+const state = { incidents: [], filter: 'open', mode: params.get('mode') || stored.mode || 'real', selected: null, detail: null, features: null, markers: new Map(), tracks: new Map(), es: null, ready: false };
 
 // --- utilidades DOM ------------------------------------------------------------------------------
 
@@ -698,5 +698,8 @@ dlgGlossary?.addEventListener('click', (e) => {
 $('btn-map-recenter')?.addEventListener('click', () => {
   if (window.centerOnActiveIncident) window.centerOnActiveIncident();
 });
+
+// Inicializar el modo visual (por defecto En Vivo Real)
+setMode(state.mode);
 
 start();
