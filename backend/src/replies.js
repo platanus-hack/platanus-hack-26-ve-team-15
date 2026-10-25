@@ -3,6 +3,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { CHANNEL } from './codec.js';
+import { handleConsent } from './consent.js';
 import { queueMsgIn } from './context.js';
 import { HttpError } from './http.js';
 import { parseReplyToken } from './tokens.js';
@@ -114,7 +115,7 @@ function handleInbound(ctx, payload, limiter) {
   ctx.store.touchWaInbound(from, ctx.now());
   const body = inboundText(msg);
   if (!body) return { ignored: 'not a text message' };
-  return replyIgnoringUnknown(ctx, from, body, limiter);
+  return handleConsent(ctx, from, body, limiter) ?? replyIgnoringUnknown(ctx, from, body, limiter);
 }
 
 function handleStatus(ctx, status, msg) {
