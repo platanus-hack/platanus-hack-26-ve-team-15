@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Baliza Vital — Guía Maestra de Pitch (3 Minutos)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(18, 26, 43, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-hover: rgba(255, 255, 255, 0.12);
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --red: #f43f5e;
+      --red-glow: rgba(244, 63, 94, 0.25);
+      --green: #10b981;
+      --green-glow: rgba(16, 185, 129, 0.2);
+      --amber: #f59e0b;
+      --purple: #a855f7;
+      --mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(circle at 15% 10%, rgba(56, 189, 248, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 85% 60%, rgba(244, 63, 94, 0.06) 0%, transparent 45%);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.6;
+      padding: 30px 20px 80px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+      position: relative;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      background: rgba(244, 63, 94, 0.15);
+      border: 1px solid rgba(244, 63, 94, 0.35);
+      border-radius: 9999px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #fda4af;
+      margin-bottom: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .badge-pill .dot {
+      width: 8px;
+      height: 8px;
+      background: var(--red);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--red);
+      animation: pulse 1.8s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 2.75rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+    }
+
+    /* Timer Widget */
+    .timer-card {
+      background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8));
+      border: 1px solid var(--primary);
+      box-shadow: 0 0 25px rgba(56, 189, 248, 0.15);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 35px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+    }
+
+    .timer-display {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .time-digits {
+      font-family: var(--mono);
+      font-size: 2.6rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .timer-phase {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .timer-controls {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 10px 18px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #04101c;
+    }
+    .btn-primary:hover {
+      background: #7dd3fc;
+      transform: translateY(-1px);
+    }
+
+    .btn-ghost {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      border-color: var(--card-border);
+    }
+    .btn-ghost:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Timeline Bar */
+    .timeline-bar {
+      width: 100%;
+      height: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 15px;
+      display: flex;
+    }
+
+    .tl-seg {
+      height: 100%;
+      transition: opacity 0.2s;
+    }
+    .tl-p1 { width: 11.1%; background: #f43f5e; } /* 20s */
+    .tl-p2 { width: 11.1%; background: #a855f7; } /* 20s */
+    .tl-p3 { width: 61.2%; background: #38bdf8; } /* 110s */
+    .tl-p4 { width: 16.6%; background: #10b981; } /* 30s */
+
+    /* Section Cards */
+    .section-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 25px;
+      backdrop-filter: blur(16px);
+      transition: border-color 0.2s ease;
+    }
+
+    .section-card:hover {
+      border-color: var(--card-hover);
+    }
+
+    .sec-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .sec-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sec-badge {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      padding: 4px 10px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-muted);
+    }
+
+    /* Script blockquote */
+    .speech-box {
+      background: rgba(15, 23, 42, 0.6);
+      border-left: 4px solid var(--primary);
+      padding: 16px 20px;
+      border-radius: 0 12px 12px 0;
+      margin: 14px 0;
+      position: relative;
+    }
+
+    .speech-box p {
+      font-size: 1.05rem;
+      color: #e2e8f0;
+      font-style: italic;
+      line-height: 1.7;
+    }
+
+    .speaker-tag {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 6px;
+      font-style: normal;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-muted);
+      border-radius: 6px;
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.2s;
+    }
+    .copy-btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+      color: #fff;
+    }
+
+    .op-action {
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px dashed rgba(56, 189, 248, 0.35);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 0.9rem;
+      color: #7dd3fc;
+      margin: 12px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .op-badge {
+      background: var(--primary);
+      color: #04101c;
+      font-weight: 700;
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+
+    /* Warning box */
+    .alert-box {
+      background: rgba(244, 63, 94, 0.1);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 25px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .alert-icon {
+      font-size: 1.5rem;
+      line-height: 1;
+    }
+
+    .alert-content h4 {
+      color: #fda4af;
+      font-size: 1rem;
+      margin-bottom: 4px;
+    }
+
+    .alert-content p {
+      font-size: 0.9rem;
+      color: #cbd5e1;
+    }
+
+    /* Q&A Accordion */
+    .qa-card {
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .qa-q {
+      font-weight: 700;
+      font-size: 1rem;
+      color: #38bdf8;
+      margin-bottom: 8px;
+    }
+
+    .qa-a {
+      font-size: 0.95rem;
+      color: #cbd5e1;
+    }
+
+    /* Checklist */
+    .check-list {
+      list-style: none;
+      display: grid;
+      gap: 10px;
+    }
+
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(15, 23, 42, 0.4);
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .check-item input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--green);
+      cursor: pointer;
+    }
+
+    .check-item span {
+      font-size: 0.92rem;
+    }
+
+    /* Floating Toast */
+    .toast {
+      position: fixed;
+      bottom: 25px;
+      right: 25px;
+      background: #1e293b;
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 10px;
+      border: 1px solid var(--primary);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.25s ease;
+      pointer-events: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      z-index: 999;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="badge-pill">
+        <span class="dot"></span> Pitch de 3 Minutos · Platanus Hack 2026
+      </div>
+      <h1>Baliza Vital — Guía Maestra</h1>
+      <p>Cronograma, guion exacto de demo y respuestas blindadas para los jueces.</p>
+    </header>
+
+    <!-- ALERTA TÉCNICA -->
+    <div class="alert-box">
+      <div class="alert-icon">⚠️</div>
+      <div class="alert-content">
+        <h4>Regla de Oro: Proyección por Cable USB (scrcpy)</h4>
+        <p>No proyecten el teléfono offline por Google Meet directo, porque al poner <strong>Modo Avión</strong> Meet se cortará. Conecten el teléfono a la laptop por USB y abran <code>scrcpy</code>. Así proyectan el Modo Avión 100% real y sin fallas.</p>
+      </div>
+    </div>
+
+    <!-- STOPWATCH ENTRENADOR -->
+    <div class="timer-card">
+      <div>
+        <div class="timer-display">
+          <div class="time-digits" id="timer">03:00</div>
+          <span style="color: var(--text-muted); font-size: 0.9rem;">/ 03:00</span>
+        </div>
+        <div class="timer-phase" id="timer-phase">Listo para ensayar</div>
+      </div>
+      <div class="timer-controls">
+        <button class="btn btn-primary" id="btn-timer-toggle" onclick="toggleTimer()">▶ Iniciar Ensayo</button>
+        <button class="btn btn-ghost" onclick="resetTimer()">↺ Reiniciar</button>
+      </div>
+      <div class="timeline-bar">
+        <div class="tl-seg tl-p1" title="0:00 - 0:20 Problema"></div>
+        <div class="tl-seg tl-p2" title="0:20 - 0:40 Solución"></div>
+        <div class="tl-seg tl-p3" title="0:40 - 2:30 Demo en Vivo"></div>
+        <div class="tl-seg tl-p4" title="2:30 - 3:00 Cierre"></div>
+      </div>
+    </div>
+
+    <!-- BLOQUE 1: EL PROBLEMA -->
+    <div class="section-card">
+      <div class="sec-header">
+        <div class="sec-title" style="color: var(--red);">1. El Problema (El Dolor Real)</div>
+        <div class="sec-badge">0:00 — 0:20 (20s)</div>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 8px;">Visual: Slide 1 (Dark Mode: <em>«Cuando cae la red, cae la vida»</em>)</p>
+      <div class="speech-box">
+        <span class="speaker-tag">Speaker (Tono sobrio y firme)</span>
+        <button class="copy-btn" onclick="copyText(this)">Copiar</button>
+        <p>«Imaginen un apagón masivo a las 3 de la mañana en Venezuela o un desastre natural. Se caen las antenas de telefonía y quedas incomunicado. Tienes un herido en casa, pero tu teléfono no tiene señal, no tiene datos y no hay saldo. En ese momento, un smartphone de 500 dólares es un ladrillo inútil. Ese aislamiento cuesta vidas.»</p>
+      </div>
+    </div>
+
+    <!-- BLOQUE 2: LA SOLUCIÓN -->
+    <div class="section-card">
+      <div class="sec-header">
+        <div class="sec-title" style="color: var(--purple);">2. La Solución (Baliza Vital)</div>
+        <div class="sec-badge">0:20 — 0:40 (20s)</div>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 8px;">Visual: Slide 2 (Diagrama conceptual: Malla BLE ➔ Nodo Puente ➔ Nube / WhatsApp)</p>
+      <div class="speech-box">
+        <span class="speaker-tag">Speaker</span>
+        <button class="copy-btn" onclick="copyText(this)">Copiar</button>
+        <p>«Por eso creamos Baliza Vital. Convertimos cada teléfono en una baliza de rescate autónoma. Sin internet ni antenas celulares, los dispositivos forman una red de malla Bluetooth entre sí. Los paquetes saltan de teléfono en teléfono de forma segura. Y en cuanto un solo teléfono de la comunidad roza una zona con conectividad, actúa como puente automático hacia el exterior.»</p>
+      </div>
+    </div>
+
+    <!-- BLOQUE 3: LA DEMO EN VIVO -->
+    <div class="section-card" style="border-color: rgba(56, 189, 248, 0.4);">
+      <div class="sec-header">
+        <div class="sec-title" style="color: var(--primary);">3. La Demo en Vivo (3 Golpes de Efecto)</div>
+        <div class="sec-badge" style="background: rgba(56, 189, 248, 0.15); color: #7dd3fc;">0:40 — 2:30 (110s)</div>
+      </div>
+
+      <!-- Golpe 1 -->
+      <h3 style="font-size: 1.05rem; margin-top: 15px; color: #fff;">Golpe 1: El Disparo Offline y el Mapa (35s)</h3>
+      <div class="op-action">
+        <span class="op-badge">Operador</span>
+        <span>Muestra scrcpy con el teléfono en Modo Avión y pulsa el botón rojo <strong>«DISPARAR SOS»</strong>.</span>
+      </div>
+      <div class="speech-box">
+        <span class="speaker-tag">Speaker</span>
+        <button class="copy-btn" onclick="copyText(this)">Copiar</button>
+        <p>«Aquí tenemos un teléfono real en Modo Avión estricto: cero WiFi, cero datos. Disparamos la alerta SOS. En este instante, el teléfono sella los datos con criptografía Ed25519 y empieza a emitir pulsos por Bluetooth.»</p>
+      </div>
+      <div class="op-action">
+        <span class="op-badge">Operador</span>
+        <span>Cambia la vista al <strong>Dashboard en la laptop</strong>; aparece el pin rojo en el mapa.</span>
+      </div>
+      <div class="speech-box">
+        <span class="speaker-tag">Speaker</span>
+        <button class="copy-btn" onclick="copyText(this)">Copiar</button>
+        <p>«A unos metros hay otro teléfono que sí tiene señal: sin abrir ninguna app, sirvió de puente invisible y lo subió a nuestro backend en Render. Vean el Dashboard: el centro de rescate ya tiene las coordenadas y la gravedad del incidente en tiempo real.»</p>
+      </div>
+
+      <hr style="border: none; border-top: 1px solid rgba(255, 255, 255, 0.08); margin: 20px 0;">
+
+      <!-- Golpe 2 -->
+      <h3 style="font-size: 1.05rem; color: #fff;">Golpe 2: El WhatsApp Familiar Bidireccional (35s)</h3>
+      <div class="op-action">
+        <span class="op-badge">Operador</span>
+        <span>Sostiene en alto el teléfono del familiar (+58 412-3098258). Suena la notificación de WhatsApp.</span>
+      </div>
+      <div class="speech-box">
+        <span class="speaker-tag">Speaker</span>
+        <button class="copy-btn" onclick="copyText(this)">Copiar</button>
+        <p>«Y al familiar del afectado le acaba de sonar su WhatsApp oficial. No es un SMS simulado: es WhatsApp Cloud API vía Kapso con los datos del rescate.»</p>
+      </div>
+      <div class="op-action">
+        <span class="op-badge">Operador</span>
+        <span>Responde desde WhatsApp: <em>«Tranquilo, la ambulancia va en camino»</em>. Enfoca el teléfono offline.</span>
+      </div>
+      <div class="speech-box">
+        <span class="speaker-tag">Speaker</span>
+        <button class="copy-btn" onclick="copyText(this)">Copiar</button>
+        <p>«El familiar contesta por WhatsApp, el servidor cifra la respuesta y viaja de regreso por la malla Bluetooth: el teléfono en Modo Avión acaba de vibrar y recibir el mensaje en pantalla. Comunicación bidireccional sin una gota de internet.»</p>
+      </div>
+
+      <hr style="border: none; border-top: 1px solid rgba(255, 255, 255, 0.08); margin: 20px 0;">
+
+      <!-- Golpe 3 -->
+      <h3 style="font-size: 1.05rem; color: var(--green);">Golpe 3: La IA de Emergencia Offline (40s) — ⭐ El Clímax</h3>
+      <div class="op-action">
+        <span class="op-badge">Operador</span>
+        <span>En el teléfono offline, baja a la tarjeta <strong>«Pregúntale a una IA»</strong>, escribe <em>«¿Qué hago ante una quemadura?»</em> y pulsa <strong>Preguntar</strong>.</span>
+      </div>
+      <div class="speech-box">
+        <span class="speaker-tag">Speaker</span>
+        <button class="copy-btn" onclick="copyText(this)">Copiar</button>
+        <p>«Pero hay más. La ambulancia tardará 20 minutos y la persona no sabe primeros auxilios. Mientras espera, utiliza nuestro asistente de IA de emergencia offline.»</p>
+      </div>
+      <div class="op-action">
+        <span class="op-badge">Operador</span>
+        <span>En 2,5 segundos, la app vibra y muestra la respuesta de Claude en verde en la pantalla offline.</span>
+      </div>
+      <div class="speech-box">
+        <span class="speaker-tag">Speaker (Contundente)</span>
+        <button class="copy-btn" onclick="copyText(this)">Copiar</button>
+        <p>«Un modelo de inteligencia artificial consultado desde un teléfono sin internet a través de Bluetooth mesh, devolviendo instrucciones de primeros auxilios en menos de 200 caracteres para salvar una vida.»</p>
+      </div>
+    </div>
+
+    <!-- BLOQUE 4: CIERRE -->
+    <div class="section-card">
+      <div class="sec-header">
+        <div class="sec-title" style="color: var(--green);">4. Arquitectura y Cierre</div>
+        <div class="sec-badge">2:30 — 3:00 (30s)</div>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 8px;">Visual: Slide 3 (3 Sellos: Criptografía Zero-Knowledge, Cero hardware extra, 850 unit tests en verde)</p>
+      <div class="speech-box">
+        <span class="speaker-tag">Speaker</span>
+        <button class="copy-btn" onclick="copyText(this)">Copiar</button>
+        <p>«Todo esto funciona sobre criptografía militar asimétrica SealedBox: ni los nodos puente ni los servidores pueden suplantar identidades. Diseñado sobre contratos binarios ultracompactos y respaldado por más de 850 tests automáticos.<br><br>No requiere comprar radios caras: funciona con el teléfono que cada persona ya tiene en el bolsillo. En 36 horas entregamos una infraestructura de rescate soberana para Venezuela. Muchas gracias.»</p>
+      </div>
+    </div>
+
+    <!-- PREGUNTAS DEL JURADO (Q&A) -->
+    <div class="section-card">
+      <div class="sec-header">
+        <div class="sec-title" style="color: var(--amber);">Defensa Blindada: Preguntas de los Jueces (2 Min)</div>
+        <div class="sec-badge">Q&A Prep</div>
+      </div>
+
+      <div class="qa-card">
+        <div class="qa-q">1. ¿Cómo responde la IA tan rápido en un paquete tan pequeño?</div>
+        <div class="qa-a">Diseñamos un contrato binario de 264 bytes. En el backend, Claude está condicionado por un prompt de triaje médico que comprime y sanea la respuesta a texto plano estricto de menos de 200 caracteres, y la devuelve sellada en un paquete CMD_RESULT que el egress inyecta en el siguiente salto de la malla.</div>
+      </div>
+
+      <div class="qa-card">
+        <div class="qa-q">2. ¿Qué pasa si en el apagón nadie en kilómetros tiene internet?</div>
+        <div class="qa-a">El protocolo utiliza Store-and-Forward (Delay-Tolerant Networking). Los paquetes se retienen en la memoria cifrada de los nodos con un tiempo de vida (TTL). En cuanto cualquier persona en moto o a pie se desplaza hacia una zona con señal, el paquete sube automáticamente a la nube sin intervención del usuario.</div>
+      </div>
+
+      <div class="qa-card">
+        <div class="qa-q">3. ¿Por qué Bluetooth y no LoRa?</div>
+        <div class="qa-a">LoRa exige comprar un dispositivo de 50 o 100 dólares. En el contexto de emergencia venezolano, la adopción debe ser de costo cero: el 100% de los teléfonos inteligentes ya tienen Bluetooth Low Energy integrado en su hardware.</div>
+      </div>
+
+      <div class="qa-card">
+        <div class="qa-q">4. ¿Tienen planeada monetización o servicios como pagos o transporte?</div>
+        <div class="qa-a">Nuestra arquitectura está desacoplada por contratos (§7 del contrato). Los esquemas de comandos para microcrédito de emergencia y despacho de transporte ya están definidos y probados criptográficamente en el backend mediante adaptadores desacoplados. Priorizamos la malla de rescate y la IA en estas 36 horas antes de conectar pasarelas bancarias reguladas.</div>
+      </div>
+    </div>
+
+    <!-- CHECKLIST PRE-TARIMA -->
+    <div class="section-card">
+      <div class="sec-header">
+        <div class="sec-title" style="color: #cbd5e1;">Checklist de los Últimos 15 Minutos</div>
+        <div class="sec-badge">Pre-Flight</div>
+      </div>
+      <ul class="check-list">
+        <label class="check-item"><input type="checkbox"> <span>Teléfono offline conectado por cable USB con <code>scrcpy</code> funcionando en la laptop.</span></label>
+        <label class="check-item"><input type="checkbox"> <span>App de Baliza Vital abierta directamente en la pantalla de SOS (con usuario ya registrado).</span></label>
+        <label class="check-item"><input type="checkbox"> <span>Probar una consulta rápida previa para calentar el contenedor de Render.</span></label>
+        <label class="check-item"><input type="checkbox"> <span>Teléfono del familiar con volumen al máximo y datos móviles activos.</span></label>
+        <label class="check-item"><input type="checkbox"> <span>Dashboard abierto en pantalla completa en el navegador de la laptop.</span></label>
+      </ul>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">¡Texto copiado al portapapeles!</div>
+
+  <script>
+    // Copy to clipboard helper
+    function copyText(btn) {
+      const p = btn.parentElement.querySelector('p');
+      if (!p) return;
+      navigator.clipboard.writeText(p.innerText).then(() => {
+        showToast('¡Texto copiado!');
+        const oldText = btn.innerText;
+        btn.innerText = '✓ Copiado';
+        setTimeout(() => btn.innerText = oldText, 2000);
+      });
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    // Practice Timer (3:00 countdown)
+    let totalSeconds = 180;
+    let currentSeconds = 180;
+    let timerInterval = null;
+
+    const phases = [
+      { until: 160, name: 'Fase 1: El Problema (0:00 - 0:20)' },
+      { until: 140, name: 'Fase 2: La Solución (0:20 - 0:40)' },
+      { until: 105, name: 'Fase 3: Demo - Golpe 1: Disparo y Mapa (0:40 - 1:15)' },
+      { until: 70,  name: 'Fase 3: Demo - Golpe 2: WhatsApp Familiar (1:15 - 1:50)' },
+      { until: 30,  name: 'Fase 3: Demo - Golpe 3: IA Offline (1:50 - 2:30)' },
+      { until: 0,   name: 'Fase 4: Arquitectura y Cierre (2:30 - 3:00)' }
+    ];
+
+    function updateDisplay() {
+      const m = Math.floor(currentSeconds / 60);
+      const s = currentSeconds % 60;
+      document.getElementById('timer').innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      
+      const p = phases.find(ph => currentSeconds > ph.until) || { name: '¡TIEMPO FINALIZADO!' };
+      document.getElementById('timer-phase').innerText = p.name;
+    }
+
+    function toggleTimer() {
+      const btn = document.getElementById('btn-timer-toggle');
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        btn.innerText = '▶ Reanudar';
+        btn.classList.remove('btn-ghost');
+        btn.classList.add('btn-primary');
+      } else {
+        if (currentSeconds <= 0) currentSeconds = totalSeconds;
+        timerInterval = setInterval(() => {
+          if (currentSeconds > 0) {
+            currentSeconds--;
+            updateDisplay();
+          } else {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            btn.innerText = '▶ Iniciar Ensayo';
+            showToast('⏰ ¡3 Minutos cumplidos!');
+          }
+        }, 1000);
+        btn.innerText = '⏸ Pausar';
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-ghost');
+      }
+    }
+
+    function resetTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+      currentSeconds = totalSeconds;
+      updateDisplay();
+      const btn = document.getElementById('btn-timer-toggle');
+      btn.innerText = '▶ Iniciar Ensayo';
+      btn.classList.remove('btn-ghost');
+      btn.classList.add('btn-primary');
+      document.getElementById('timer-phase').innerText = 'Listo para ensayar';
+    }
+  </script>
+</body>
+</html>

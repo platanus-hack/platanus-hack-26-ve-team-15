@@ -24,8 +24,8 @@
     <div class="stats" id="stats" aria-live="polite"></div>
     <div class="top-actions">
       <div class="mode-switch" role="group" aria-label="Modo de Operación">
-        <button type="button" class="mode-btn on" id="btn-mode-demo" data-mode="demo">🧪 Modo Demo</button>
-        <button type="button" class="mode-btn" id="btn-mode-real" data-mode="real">🔴 En Vivo Real</button>
+        <button type="button" class="mode-btn" id="btn-mode-demo" data-mode="demo">🧪 Modo Demo</button>
+        <button type="button" class="mode-btn on" id="btn-mode-real" data-mode="real">🔴 En Vivo Real</button>
       </div>
       <span class="conn" id="conn" data-state="connecting"><i></i><span>Conectando…</span></span>
       <a class="btn ghost" href="/preview-app.html" target="_blank" rel="noopener" style="text-decoration:none;">📱 App Móvil</a>
@@ -34,8 +34,8 @@
     </div>
   </header>
 
-  <div class="mode-banner demo-banner" id="mode-banner">
-    <div class="banner-content" id="banner-demo-view">
+  <div class="mode-banner real-banner" id="mode-banner">
+    <div class="banner-content" id="banner-demo-view" style="display: none;">
       <span class="badge-mode demo">🧪 MODO DEMOSTRACIÓN</span>
       <div class="ticker-container" aria-label="Telemetría en vivo">
         <div class="ticker-track">
@@ -58,7 +58,7 @@
         <button type="button" class="btn sm ghost" id="btn-demo-clear">🧹 Limpiar Demo</button>
       </div>
     </div>
-    <div class="banner-content" id="banner-real-view" style="display: none;">
+    <div class="banner-content" id="banner-real-view">
       <span class="badge-mode real">🔴 CENTRO DE OPERACIONES EN VIVO</span>
       <div class="ticker-container" aria-label="Telemetría real">
         <div class="ticker-track">
