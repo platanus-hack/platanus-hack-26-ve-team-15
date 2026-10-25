@@ -120,12 +120,7 @@ class ReplyInbox(
         val contact = plain[0].toInt() and 0xFF
         val channel = plain[1].toInt() and 0xFF
         if (contact > MAX_CONTACT || channel !in VALID_CHANNELS) return null
-        val text = try {
-            Charsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT)
-                .decode(ByteBuffer.wrap(plain, 2, plain.size - 2)).toString()
-        } catch (_: CharacterCodingException) {
-            return null
-        }
+        val text = decodeUtf8(plain, 2) ?: return null
         val clean = clean(text)
         if (clean.isEmpty()) return null
         return Reply(incidentHex, seq, contact, channel, clean, nowMillis())
@@ -138,7 +133,15 @@ class ReplyInbox(
         private val VALID_CHANNELS = setOf(1, 2, 4)
 
         /** Control characters (except new lines and tabs) removed, trimmed, capped. */
-        fun clean(text: String): String =
-            text.filter { it == '\n' || it == '\t' || it.code >= 0x20 && it.code != 0x7F }.trim().take(MAX_CHARS)
+        fun clean(text: String, max: Int = MAX_CHARS): String =
+            text.filter { it == '\n' || it == '\t' || it.code >= 0x20 && it.code != 0x7F }.trim().take(max)
+
+        /** The bytes from [from] on as UTF-8, or null if they are not valid UTF-8. */
+        fun decodeUtf8(bytes: ByteArray, from: Int): String? = try {
+            Charsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT)
+                .decode(ByteBuffer.wrap(bytes, from, bytes.size - from)).toString()
+        } catch (_: CharacterCodingException) {
+            null
+        }
     }
 }

@@ -16,6 +16,10 @@ import com.baliza.emergency.crypto.SealedBox
 import com.baliza.emergency.identity.ServerKeys
 import com.baliza.emergency.identity.UserIdentityStore
 import com.baliza.emergency.registration.RegistrationClient
+import com.baliza.emergency.ask.AskStart
+import com.baliza.emergency.ask.AskStatus
+import com.baliza.emergency.ask.PrefsAskStore
+import com.baliza.emergency.ask.QuestionSender
 import com.baliza.emergency.replies.PrefsReplyStore
 import com.baliza.emergency.replies.Reply
 import com.baliza.emergency.replies.ReplyInbox
@@ -137,6 +141,25 @@ class EmergencyApp private constructor(context: Context) {
 
         val sosStatus: StateFlow<SosStatus> = sender.status
 
+        /** Questions to an AI over the mesh: a CMD into the incident the server already acknowledged. */
+        private val asker = QuestionSender(
+            transport = transport,
+            identity = identity,
+            serverKeys = identityStore::serverKeys,
+            incidentId = sender::acknowledgedIncidentId,
+            scope = scope,
+            store = PrefsAskStore.create(appContext),
+            onFinished = { vibrate() }
+        )
+        val askStatus: StateFlow<AskStatus> = asker.status
+
+        /** Public identifiers, for the debug panel and for whoever tests against the server. Not secrets. */
+        val senderIdHex: String get() = identity.senderIdHex
+
+        suspend fun ask(question: String): AskStart = withContext(dispatcher) { asker.ask(question) }
+
+        suspend fun resetAsk() = withContext(dispatcher) { asker.reset() }
+
         /** What the contacts answered, whether it came over the mesh or straight from the server. */
         private val replyInbox = ReplyInbox(
             incoming = transport.incoming,
@@ -209,6 +232,7 @@ class EmergencyApp private constructor(context: Context) {
         }
 
         suspend fun cancelSos() = withContext(dispatcher) {
+            asker.reset()
             sender.status.value.incidentIdHex?.let(transport::forgetOwn)
             sender.cancel()
         }
@@ -249,6 +273,7 @@ class EmergencyApp private constructor(context: Context) {
          */
         suspend fun resetForTesting() = withContext(dispatcher) {
             testSender?.cancel(); testSender = null
+            asker.reset()
             sender.status.value.incidentIdHex?.let(transport::forgetOwn)
             sender.cancel()
             identityStore.wipe()

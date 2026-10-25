@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.baliza.emergency.app.ContactProfile
 import com.baliza.emergency.app.SosLabels
+import com.baliza.emergency.ask.AskStatus
 import com.baliza.emergency.replies.Reply
 import com.baliza.emergency.sos.SosSender
 import com.baliza.emergency.sos.SosState
@@ -56,7 +57,11 @@ fun SosScreen(
     form: SosFormState,
     replies: List<Reply>,
     status: SosStatus,
+    ask: AskStatus,
+    askError: String?,
     error: String?,
+    onAsk: (String) -> Unit,
+    onResetAsk: () -> Unit,
     onStart: (category: Int, severity: Int, publicText: String, note: String, contacts: Set<Int>) -> Unit,
     onCancel: () -> Unit,
     onDismissError: () -> Unit,
@@ -75,6 +80,7 @@ fun SosScreen(
 
         if (active) {
             StatusCard(status)
+            if (SosLabels.canAsk(status.state)) AskCard(ask, askError, onAsk, onResetAsk)
             OutlinedButton(onClick = { confirmCancel = true }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar aviso") }
         } else {
             Text("¿Qué pasa?", style = MaterialTheme.typography.titleMedium)

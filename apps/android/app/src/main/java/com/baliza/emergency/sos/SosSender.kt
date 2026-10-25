@@ -120,6 +120,13 @@ class SosSender(
         )
     }
 
+    /**
+     * The incident id once the server has acknowledged the SOS: what a later CMD must belong to. Null before
+     * the first ACK, after a rejection, or with no incident.
+     */
+    fun acknowledgedIncidentId(): ByteArray? =
+        incident?.takeIf { _status.value.state.let { s -> isAckState(s) && s != SosState.REJECTED } }?.id?.copyOf()
+
     /** Stops resending. Does not tell the server; closing an incident is a separate UPDATE (R6). */
     fun cancel() {
         (listeners + retryJobs).forEach(Job::cancel)
@@ -226,7 +233,9 @@ class SosSender(
         val ack = EmergencyCodec.decodeOrNull(received.payload) ?: return
         if (ack.type != EmergencyType.ACK) return
         if (!ack.incidentId.contentEquals(current.id)) return
-        if (ack.seq < current.seq) return // acknowledges something older than what we sent
+        // Only the SOS's own ACK counts. A CMD of the same incident gets its own (seq 2+), and a refusal of it
+        // (ACK code 3) must not mark the SOS as rejected or stop resending an SOS that never arrived.
+        if (ack.seq != current.seq) return
         val server = serverKeys() ?: return
         if (!ack.senderId.contentEquals(Ed25519.senderId(server.signPublicKey))) return
         if (!EmergencyCodec.verify(ack, server.signPublicKey)) return

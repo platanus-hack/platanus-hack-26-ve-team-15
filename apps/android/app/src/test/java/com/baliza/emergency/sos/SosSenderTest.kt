@@ -326,6 +326,39 @@ class SosSenderTest {
     }
 
     @Test
+    fun `the ack of a later packet of the incident does not touch the SOS`() = runTest {
+        val r = rig()
+        val id = started(r); runCurrent()
+        // A refused CMD (seq 2) comes back as code 3 or 0: the SOS never arrived, so it must keep resending.
+        r.transport.hear(ack(id, code = 3, seq = 2)); runCurrent()
+        r.transport.hear(ack(id, code = 0, seq = 2)); runCurrent()
+        r.transport.hear(ack(id, code = 2, seq = 7)); runCurrent()
+        assertTrue(r.sender.status.value.state in setOf(SosState.SENT, SosState.UNSENT))
+        val before = r.transport.sent.size
+        advanceTimeBy(15_000); runCurrent()
+        assertTrue("still resending", r.transport.sent.size > before)
+        r.transport.hear(ack(id, code = 0, seq = 1)); runCurrent()
+        assertEquals(SosState.RECEIVED, r.sender.status.value.state)
+    }
+
+    @Test
+    fun `the incident id is offered for a CMD only once the server acknowledged the SOS`() = runTest {
+        val r = rig()
+        assertEquals(null, r.sender.acknowledgedIncidentId())
+        val id = started(r); runCurrent()
+        assertEquals(null, r.sender.acknowledgedIncidentId())
+        r.transport.hear(ack(id, code = 0)); runCurrent()
+        assertEquals(id, r.sender.acknowledgedIncidentId()!!.joinToString("") { "%02x".format(it) })
+        r.sender.cancel()
+        assertEquals(null, r.sender.acknowledgedIncidentId())
+
+        val rejected = rig()
+        val rid = started(rejected); runCurrent()
+        rejected.transport.hear(ack(rid, code = 3)); runCurrent()
+        assertEquals(null, rejected.sender.acknowledgedIncidentId())
+    }
+
+    @Test
     fun `an ack whose sender id does not match the server key is ignored`() = runTest {
         val r = rig()
         val id = started(r); runCurrent()

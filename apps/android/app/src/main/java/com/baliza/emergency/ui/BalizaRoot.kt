@@ -48,6 +48,8 @@ private fun ReadyContent(vm: BalizaViewModel, engine: EmergencyApp.Engine, onOpe
     val profile by engine.profile.collectAsState()
     val status by engine.sosStatus.collectAsState()
     val replies by engine.replies.collectAsState()
+    val ask by engine.askStatus.collectAsState()
+    val askError by vm.askError.collectAsState()
     val registration by vm.registration.collectAsState()
     val sosError by vm.sosError.collectAsState()
     var showDebug by rememberSaveable { mutableStateOf(false) }
@@ -82,7 +84,11 @@ private fun ReadyContent(vm: BalizaViewModel, engine: EmergencyApp.Engine, onOpe
             form = form,
             replies = replies,
             status = status,
+            ask = ask,
+            askError = askError,
             error = sosError,
+            onAsk = { vm.ask(engine, it) },
+            onResetAsk = { vm.resetAsk(engine) },
             onStart = { category, severity, text, note, contacts -> vm.startSos(engine, category, severity, text, note, contacts) },
             onCancel = { vm.cancelSos(engine) },
             onDismissError = vm::clearSosError,

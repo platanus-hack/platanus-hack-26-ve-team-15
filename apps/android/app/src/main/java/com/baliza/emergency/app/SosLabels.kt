@@ -55,6 +55,10 @@ object SosLabels {
         else -> "Prueba: ${title(state)} (intentos $attempts)"
     }
 
+    /** The server has the SOS, so a CMD (a question to the AI) has an incident to belong to. */
+    fun canAsk(state: SosState): Boolean =
+        state == SosState.RECEIVED || state == SosState.IN_PROGRESS || state == SosState.CONTACTS_NOTIFIED
+
     /** True while the phone is still resending, so the screen should offer to cancel. */
     fun active(state: SosState): Boolean = state != SosState.IDLE
 }

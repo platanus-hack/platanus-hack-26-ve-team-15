@@ -72,6 +72,9 @@ fun DebugScreen(vm: BalizaViewModel, engine: EmergencyApp.Engine, onBack: () -> 
         }
         Text(SosLabels.testLine(test.state, test.attempts), style = MaterialTheme.typography.bodyMedium)
         Text("SOS real: ${status.state} · intentos ${status.attempts}", style = MaterialTheme.typography.bodySmall)
+        // Public identifiers (they travel in clear in every packet): what someone testing the server needs.
+        Text("sender_id: ${engine.senderIdHex}", style = MaterialTheme.typography.bodySmall)
+        Text("incident_id: ${status.incidentIdHex ?: "—"}", style = MaterialTheme.typography.bodySmall)
 
         Text("Paquetes oídos (${heard.size})", style = MaterialTheme.typography.titleMedium)
         if (heard.isEmpty()) Text("Nada todavía.", color = MaterialTheme.colorScheme.onSurfaceVariant)
