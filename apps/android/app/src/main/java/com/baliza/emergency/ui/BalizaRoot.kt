@@ -55,6 +55,8 @@ private fun ReadyContent(vm: BalizaViewModel, engine: EmergencyApp.Engine, onOpe
     val replies by engine.replies.collectAsState()
     val ask by engine.askStatus.collectAsState()
     val askError by vm.askError.collectAsState()
+    val pay by engine.payStatus.collectAsState()
+    val payError by vm.payError.collectAsState()
     val registration by vm.registration.collectAsState()
     val sosError by vm.sosError.collectAsState()
     var showDebug by rememberSaveable { mutableStateOf(false) }
@@ -91,9 +93,13 @@ private fun ReadyContent(vm: BalizaViewModel, engine: EmergencyApp.Engine, onOpe
             status = status,
             ask = ask,
             askError = askError,
+            pay = pay,
+            payError = payError,
             error = sosError,
             onAsk = { vm.ask(engine, it) },
             onResetAsk = { vm.resetAsk(engine) },
+            onPay = { vm.pay(engine, it) },
+            onResetPay = { vm.resetPay(engine) },
             onStart = { category, severity, text, note, contacts -> vm.startSos(engine, category, severity, text, note, contacts) },
             onCancel = { vm.cancelSos(engine) },
             onDismissError = vm::clearSosError,

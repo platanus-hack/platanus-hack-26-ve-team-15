@@ -74,6 +74,14 @@ const clock = (ts) => new Date(ts * 1000).toLocaleTimeString('es', { hour: '2-di
 const sevOf = (i) => (i.status === 'closed' ? SEV[0] : SEV[i.severity] ?? SEV[1]);
 const keyOf = (i) => `${i.sender_id}:${i.incident_id}`;
 
+// --- pagos con microcrédito (los recibos los arma el backend; aquí solo se muestran) -----------------
+const usd = (cents) => `US$${(cents / 100).toFixed(2)}`;
+const PAY_TITLES = { pagar: 'Pago Móvil Adelantado (Microcrédito)', recargar_saldo: 'Recarga Adelantada (Microcrédito)' };
+const payTitle = (receipt) => PAY_TITLES[receipt.kind] ?? 'Adelanto (Microcrédito)';
+const payHeadline = (r) => `${payTitle(r)} – Ref ${r.ref}`;
+const payDetail = (r) => `${usd(r.amount_cents)} a ${r.destination} · ${r.installments} cuotas de ${usd(r.installment_cents)} (+${usd(r.fee_cents)} de comisión) · cupo restante ${usd(r.available_cents)}`;
+const dueDate = (ts) => new Date(ts * 1000).toLocaleDateString('es', { day: '2-digit', month: 'short' });
+
 function toast(text, color = 'var(--accent)') {
   const t = h('div', { class: 'toast', style: `--c:${color}`, role: 'status' }, text);
   $('toasts').append(t);
@@ -126,7 +134,24 @@ function onEvent(e) {
   const fresh = Date.now() / 1000 - e.at < 30;
   if (e.kind === 'incident_created' && state.ready && fresh) toast('Nuevo SOS recibido', 'var(--sev3)');
   if (e.kind === 'contact_reply' && state.ready && fresh) toast('Un contacto respondió', 'var(--ok)');
+  if (e.kind === 'command' && e.data?.receipt && state.ready && fresh) announcePayment(e.data.receipt);
   if (e.kind === 'notification_status' || e.incident_id || e.kind.startsWith('user')) scheduleRefresh();
+}
+
+// Cada tira del ticker repite su contenido dos veces para el bucle (se desplaza -50 %): el aviso entra en las
+// dos mitades, al principio de cada una, para que el salto de reinicio no se note.
+const MAX_TICKER_PAYMENTS = 3;
+function announcePayment(receipt) {
+  const text = `${payHeadline(receipt)} · ${payDetail(receipt)}`;
+  toast(`💸 ${payHeadline(receipt)}`, 'var(--warn)');
+  const item = () => h('span', { class: 'ticker-item pay' }, h('span', { class: 'dot' }), ' ', h('b', {}, '💸 MICROCRÉDITO:'), ` ${text}`);
+  for (const track of document.querySelectorAll('.ticker-track')) {
+    const half = track.children.length / 2;
+    track.insertBefore(item(), track.children[half]);
+    track.insertBefore(item(), track.firstChild);
+    const pays = [...track.querySelectorAll('.ticker-item.pay')];
+    if (pays.length > MAX_TICKER_PAYMENTS * 2) { pays[pays.length - 1].remove(); pays[pays.length / 2 - 1].remove(); }
+  }
 }
 
 // --- datos ----------------------------------------------------------------------------------------
@@ -426,11 +451,43 @@ function describe(e, names) {
     case 'mailbox': return [`📬 ${MSG_TYPES[d.msg_type] ?? 'Mensaje'} dejado en buzón para el teléfono`, 'var(--violet)'];
     case 'contacts_notified': return [`👥 Aviso por ${CHANNEL_ICONS[d.canal] ?? d.canal}: ${(d.enviados || []).map((x) => `${who(x.indice)} (${STATES[x.estado] ?? x.estado})`).join(', ') || 'nadie'}`, 'var(--ok)'];
     case 'contact_reply': return [`💬 ${who(d.contact_idx)} respondió por ${CHANNEL_ICONS[d.channel] ?? d.channel}`, 'var(--ok)'];
-    case 'command': return [`⚡ Comando ${d.cmd} (ref ${d.ref}): ${CMD_STATUS[d.status] ?? d.status}`, 'var(--warn)'];
+    case 'command':
+      if (d.receipt) return [`💸 ${payHeadline(d.receipt)}: ${payDetail(d.receipt)}`, 'var(--warn)'];
+      return [`⚡ Comando ${d.cmd} (ref ${d.ref}): ${CMD_STATUS[d.status] ?? d.status}${d.text && d.status === 1 ? ` – ${d.text}` : ''}`, d.status === 1 ? 'var(--bad)' : 'var(--warn)'];
     case 'blob_unreadable': return ['⚠️ No se pudo abrir el contenido sellado; se usó aviso de emergencia a todos los contactos', 'var(--bad)'];
     case 'notification_status': return [`📬 Estado de entrega actualizado: ${STATES[d.status] ?? d.status}`, 'var(--ok)'];
     default: return null;
   }
+}
+
+function commandCard(e) {
+  const { data } = e;
+  if (data.receipt) {
+    return h('div', { class: 'mock pay' },
+      h('b', {}, payHeadline(data.receipt)),
+      h('div', {}, payDetail(data.receipt)),
+      data.receipt.concept && h('div', { class: 'pay-concept' }, `Concepto: ${data.receipt.concept}`));
+  }
+  const why = data.status === 1 && data.text ? ` – ${data.text}` : '';
+  return h('div', { class: 'mock' }, `[MOCK] ${data.cmd} · ref ${data.ref} · ${CMD_STATUS[data.status] ?? data.status}${why}`);
+}
+
+/** Cupo del microcrédito del usuario y el plan de cuotas de cada adelanto (solo con FEATURE_PAYMENTS). */
+function creditSection(c) {
+  const usedPct = c.limit_cents ? Math.min(100, Math.round((c.used_cents / c.limit_cents) * 100)) : 0;
+  return h('div', { class: 'sec' },
+    h('h3', {}, '💳 Microcrédito de Emergencia (Simulado)'),
+    h('p', { class: 'sec-explain' }, `Pago Móvil y recargas sin saldo ni señal: se adelantan contra el cupo y se devuelven en ${c.installments} cuotas cada ${c.installment_days} días (comisión ${c.fee_bps / 100} %).`),
+    h('div', { class: 'credit-meter', role: 'img', 'aria-label': `Cupo usado ${usedPct} %` }, h('i', { style: `width:${usedPct}%` })),
+    h('div', { class: 'credit-line' },
+      h('span', {}, `Disponible ${usd(c.available_cents)}`),
+      h('span', {}, `Usado ${usd(c.used_cents)} / ${usd(c.limit_cents)}`)),
+    c.transactions.length
+      ? c.transactions.map((t) => h('div', { class: 'mock pay' },
+        h('b', {}, `${PAY_TITLES[t.kind] ?? 'Adelanto'} – Ref ${t.ref}`),
+        h('div', {}, `${usd(t.amount_cents)} a ${t.destination} · total ${usd(t.total_cents)}`),
+        h('div', { class: 'pay-concept' }, t.schedule.map((q) => `Cuota ${q.n}: ${usd(q.amount_cents)} (${dueDate(q.due_at)})`).join(' · '))))
+      : h('p', { class: 'hint', style: 'color:var(--muted)' }, 'Aún no ha adelantado ningún pago.'));
 }
 
 async function adminPost(path, body, okText) {
@@ -529,11 +586,13 @@ function renderDetail() {
       cfg.admin && d.notifications.length > 0 && replyForm(i, d.notifications[0].contact_idx)
     ),
 
+    d.credit && creditSection(d.credit),
+
     h('div', { class: 'sec' },
       h('h3', {}, '⚡ Comandos Offline (Movilidad y Logística de Asistencia)'),
       h('p', { class: 'sec-explain' }, 'Capacidades de contingencia: el usuario sin datos puede solicitar traslado de auxilio médico o suministros vía comando firmado.'),
       commands.length
-        ? commands.map((e) => h('div', { class: 'mock' }, `[MOCK] ${e.data.cmd} · ref ${e.data.ref} · ${CMD_STATUS[e.data.status] ?? e.data.status}`))
+        ? commands.map(commandCard)
         : h('p', { class: 'hint', style: 'color:var(--muted)' }, 'Sin comandos solicitados por el usuario aún.'),
       h('button', { class: 'btn primary', style: 'margin-top: 10px; width: 100%; font-size: 13px;', type: 'button',
         onclick: () => adminPost('/v1/dev/dispatch-ride', { sender_id: i.sender_id, incident_id: i.incident_id, destino: 'Punto de Asistencia Táctica / Altamira' }, '🚑 Unidad de Asistencia despachada') },

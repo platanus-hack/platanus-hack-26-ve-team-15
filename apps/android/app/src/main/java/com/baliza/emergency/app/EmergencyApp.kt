@@ -20,6 +20,10 @@ import com.baliza.emergency.ask.AskStart
 import com.baliza.emergency.ask.AskStatus
 import com.baliza.emergency.ask.PrefsAskStore
 import com.baliza.emergency.ask.QuestionSender
+import com.baliza.emergency.pay.PayStart
+import com.baliza.emergency.pay.PayStatus
+import com.baliza.emergency.pay.PaymentRequest
+import com.baliza.emergency.pay.PaymentSender
 import com.baliza.emergency.replies.PrefsReplyStore
 import com.baliza.emergency.replies.Reply
 import com.baliza.emergency.replies.ReplyInbox
@@ -141,6 +145,9 @@ class EmergencyApp private constructor(context: Context) {
 
         val sosStatus: StateFlow<SosStatus> = sender.status
 
+        /** `seq` and `ref` counters shared by every CMD: a question and a payment must never draw the same number. */
+        private val commandCounters = PrefsAskStore.create(appContext)
+
         /** Questions to an AI over the mesh: a CMD into the incident the server already acknowledged. */
         private val asker = QuestionSender(
             transport = transport,
@@ -148,10 +155,22 @@ class EmergencyApp private constructor(context: Context) {
             serverKeys = identityStore::serverKeys,
             incidentId = sender::acknowledgedIncidentId,
             scope = scope,
-            store = PrefsAskStore.create(appContext),
+            store = commandCounters,
             onFinished = { vibrate() }
         )
         val askStatus: StateFlow<AskStatus> = asker.status
+
+        /** Pago Móvil and top-ups advanced against a simulated microcredit line: also a CMD of the same incident. */
+        private val payer = PaymentSender(
+            transport = transport,
+            identity = identity,
+            serverKeys = identityStore::serverKeys,
+            incidentId = sender::acknowledgedIncidentId,
+            scope = scope,
+            store = commandCounters,
+            onFinished = { vibrate() }
+        )
+        val payStatus: StateFlow<PayStatus> = payer.status
 
         /** Public identifiers, for the debug panel and for whoever tests against the server. Not secrets. */
         val senderIdHex: String get() = identity.senderIdHex
@@ -159,6 +178,10 @@ class EmergencyApp private constructor(context: Context) {
         suspend fun ask(question: String): AskStart = withContext(dispatcher) { asker.ask(question) }
 
         suspend fun resetAsk() = withContext(dispatcher) { asker.reset() }
+
+        suspend fun pay(request: PaymentRequest): PayStart = withContext(dispatcher) { payer.pay(request) }
+
+        suspend fun resetPay() = withContext(dispatcher) { payer.reset() }
 
         /** What the contacts answered, whether it came over the mesh or straight from the server. */
         private val replyInbox = ReplyInbox(
@@ -233,6 +256,7 @@ class EmergencyApp private constructor(context: Context) {
 
         suspend fun cancelSos() = withContext(dispatcher) {
             asker.reset()
+            payer.reset()
             sender.status.value.incidentIdHex?.let(transport::forgetOwn)
             sender.cancel()
         }
@@ -274,6 +298,7 @@ class EmergencyApp private constructor(context: Context) {
         suspend fun resetForTesting() = withContext(dispatcher) {
             testSender?.cancel(); testSender = null
             asker.reset()
+            payer.reset()
             sender.status.value.incidentIdHex?.let(transport::forgetOwn)
             sender.cancel()
             identityStore.wipe()

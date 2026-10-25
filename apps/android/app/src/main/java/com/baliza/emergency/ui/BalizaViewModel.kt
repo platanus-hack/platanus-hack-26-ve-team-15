@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.baliza.emergency.app.ContactProfile
 import com.baliza.emergency.app.EmergencyApp
 import com.baliza.emergency.ask.AskStart
+import com.baliza.emergency.pay.PayStart
+import com.baliza.emergency.pay.PaymentRequest
 import com.baliza.emergency.registration.RegistrationResult
 import com.baliza.emergency.sos.StartResult
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -70,6 +72,19 @@ class BalizaViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { engine.resetAsk() }
     }
 
+    private val _payError = MutableStateFlow<String?>(null)
+    val payError: StateFlow<String?> = _payError.asStateFlow()
+
+    fun pay(engine: EmergencyApp.Engine, request: PaymentRequest) {
+        _payError.value = null
+        viewModelScope.launch { _payError.value = payMessage(engine.pay(request)) }
+    }
+
+    fun resetPay(engine: EmergencyApp.Engine) {
+        _payError.value = null
+        viewModelScope.launch { engine.resetPay() }
+    }
+
     fun cancelSos(engine: EmergencyApp.Engine) {
         viewModelScope.launch { engine.cancelSos() }
     }
@@ -103,6 +118,14 @@ class BalizaViewModel(app: Application) : AndroidViewModel(app) {
             is AskStart.NotRegistered -> "Falta completar el registro."
             is AskStart.NoIncident -> "Primero espera la confirmación de tu aviso."
             is AskStart.Invalid -> "No se pudo preparar la pregunta: ${result.reason}."
+        }
+
+        fun payMessage(result: PayStart): String? = when (result) {
+            is PayStart.Started -> null
+            is PayStart.Busy -> "Ya hay un pago en curso."
+            is PayStart.NotRegistered -> "Falta completar el registro."
+            is PayStart.NoIncident -> "Primero espera la confirmación de tu aviso."
+            is PayStart.Invalid -> result.reason
         }
 
         fun sosMessage(result: StartResult): String? = when (result) {

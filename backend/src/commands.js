@@ -3,7 +3,9 @@
 // el usuario (paquete tipo 6 ya verificado) llega aquí; el texto de MSG_IN o de la nota nunca lo hace.
 import { createHash } from 'node:crypto';
 import { consultarAlertas } from './agent.js';
+import { ArgError, amount, currency, str } from './args.js';
 import { queueCmdResult } from './context.js';
+import { advance, parsePagoMovil, parseRecarga, usesCredit } from './pagomovil.js';
 
 export const STATUS = Object.freeze({ OK: 0, REJECTED: 1, ERROR: 2, DISABLED: 3 });
 
@@ -11,24 +13,7 @@ const PAYMENT_CMDS = new Set(['recargar_saldo', 'pagar']);
 const RIDE_CMDS = new Set(['pedir_ride', 'pedir_delivery']);
 const KNOWN = new Set(['consultar_alertas', ...PAYMENT_CMDS, ...RIDE_CMDS]);
 
-class ArgError extends Error {}
-
 const DAY_S = 24 * 3600;
-
-function str(v, max, field) {
-  if (typeof v !== 'string' || !v.trim() || v.length > max) throw new ArgError(`${field} inválido`);
-  return v.trim();
-}
-
-function amount(v) {
-  if (typeof v !== 'number' || !Number.isFinite(v) || v <= 0 || v > 100_000) throw new ArgError('monto inválido');
-  return v;
-}
-
-function currency(v) {
-  if (typeof v !== 'string' || !/^[A-Za-z]{3}$/.test(v)) throw new ArgError('moneda inválida');
-  return v.toUpperCase();
-}
 
 function mockRef(senderId, ref, cmd) {
   const digest = createHash('sha256').update(`${senderId}:${ref}:${cmd}`).digest('hex');
@@ -51,15 +36,18 @@ function alertsSummary(alertas) {
   return `${alertas.length} alerta(s) cercanas: ${list}`;
 }
 
-// Cada herramienta valida sus argumentos con un esquema estricto y devuelve { text, amount }.
+// Cada herramienta valida sus argumentos con un esquema estricto y devuelve { text, amount }; las que usan el
+// microcrédito devuelven además `receipt` (para el panel) y `commit` (descuenta el cupo tras pasar los topes).
 const TOOLS = {
-  recargar_saldo(a, { senderId, ref }) {
+  recargar_saldo(a, { ctx, senderId, ref }) {
+    if (usesCredit(a)) return advance(ctx, { senderId, ref, refCode: mockRef(senderId, ref, 'recargar_saldo') }, parseRecarga(a));
     const operador = str(a.operador, 40, 'operador');
     const monto = amount(a.monto);
     const moneda = currency(a.moneda);
     return { amount: monto, text: `[MOCK] Recarga simulada de ${monto} ${moneda} a ${operador}. Ref ${mockRef(senderId, ref, 'recargar_saldo')}` };
   },
-  pagar(a, { senderId, ref }) {
+  pagar(a, { ctx, senderId, ref }) {
+    if (usesCredit(a)) return advance(ctx, { senderId, ref, refCode: mockRef(senderId, ref, 'pagar') }, parsePagoMovil(a));
     const beneficiario = str(a.beneficiario, 80, 'beneficiario');
     const monto = amount(a.monto);
     const moneda = currency(a.moneda);
@@ -91,8 +79,8 @@ function featureOff(ctx, cmd) {
   return (PAYMENT_CMDS.has(cmd) && !ctx.config.featurePayments) || (RIDE_CMDS.has(cmd) && !ctx.config.featureRides);
 }
 
-function outcome(status, text, amountValue = 0) {
-  return { status, text, amount: amountValue };
+function outcome(status, text, amountValue = 0, receipt = undefined) {
+  return { status, text, amount: amountValue, receipt };
 }
 
 function dailyCountReached(ctx, { senderId, cmd }) {
@@ -116,7 +104,8 @@ function execute(ctx, c) {
     const incident = ctx.store.getIncident(c.senderId, c.incidentId);
     const out = TOOLS[c.cmd](c.args, { ctx, senderId: c.senderId, ref: c.ref, incident });
     if (amountCapped(ctx, c.senderId, out.amount)) return outcome(STATUS.REJECTED, 'Tope diario de monto alcanzado');
-    return outcome(STATUS.OK, out.text, out.amount);
+    out.commit?.();
+    return outcome(STATUS.OK, out.text, out.amount, out.receipt);
   } catch (e) {
     if (e instanceof ArgError) return outcome(STATUS.REJECTED, e.message);
     ctx.log(`[cmd] ${c.cmd}: ${e.stack || e}`);
@@ -127,17 +116,19 @@ function execute(ctx, c) {
 /** Decide y registra el resultado. Idempotente por (sender_id, ref): un ref repetido no se re-ejecuta. */
 export function decideCommand(ctx, c) {
   const prior = ctx.store.getCommand(c.senderId, c.ref);
-  if (prior) return { status: prior.status, text: prior.result_text, repeated: true };
+  if (prior) return { status: prior.status, text: prior.result_text, receipt: undefined, repeated: true };
   const result = precheck(ctx, c) ?? execute(ctx, c);
   ctx.store.addCommand({ senderId: c.senderId, ref: c.ref, cmd: c.cmd, status: result.status, resultText: result.text, amount: result.amount, at: ctx.now() });
-  return { status: result.status, text: result.text, repeated: false };
+  return { status: result.status, text: result.text, receipt: result.receipt, repeated: false };
 }
 
 export function executeCommand(ctx, user, params) {
   const result = decideCommand(ctx, { ...params, senderId: user.sender_id });
   if (!result.repeated) {
     queueCmdResult(ctx, user, params.incidentId, { ref: params.ref, status: result.status, text: result.text });
-    ctx.emit('command', { senderId: user.sender_id, incidentId: params.incidentId, data: { cmd: params.cmd, ref: params.ref, status: result.status } });
+    const data = { cmd: params.cmd, ref: params.ref, status: result.status, text: result.text };
+    if (result.receipt) data.receipt = result.receipt;
+    ctx.emit('command', { senderId: user.sender_id, incidentId: params.incidentId, data });
   }
   return result;
 }
