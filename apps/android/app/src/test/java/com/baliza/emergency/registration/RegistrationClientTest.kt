@@ -50,13 +50,29 @@ class RegistrationClientTest {
     @After
     fun tearDown() = server.close()
 
-    private fun created(senderId: String = identity.senderIdHex, serverSignPk: ByteArray = serverSign) = MockResponse.Builder()
+    private val twoContacts = """[{"index":0,"status":"pending_verification"},{"index":1,"status":"pending_verification"}]"""
+
+    private fun created(
+        senderId: String = identity.senderIdHex,
+        serverSignPk: ByteArray = serverSign,
+        contactsJson: String = twoContacts
+    ) = MockResponse.Builder()
         .code(201)
         .body(
             """{"sender_id":"$senderId","server":{"key_id":"k1","sign_pk_b64":"${b64.encodeToString(serverSignPk)}",
                "seal_pk_b64":"${b64.encodeToString(serverSeal)}"},
-               "contacts":[{"index":0,"status":"pending_verification"},{"index":1,"status":"pending_verification"}]}"""
+               "contacts":$contactsJson}"""
         ).build()
+
+    @Test
+    fun `each contact invite code is read, and a missing, null or malformed one is just absent`() = runBlocking {
+        server.enqueue(created(contactsJson = """[{"index":0,"status":"pending_verification","invite_code":"K7M2QX9P"},
+            {"index":1,"status":"verified","invite_code":null},{"index":2,"status":"verified"},
+            {"index":3,"status":"verified","invite_code":"no es un código"},{"index":4,"status":"verified","invite_code":{"x":1}}]"""))
+        val result = client.register(identity, "Usuario Demo", contacts) as RegistrationResult.Success
+        assertEquals(listOf("K7M2QX9P", null, null, null, null), result.contacts.map { it.inviteCode })
+        assertEquals("verified", result.contacts[1].status)
+    }
 
     @Test
     fun `sends a signed request that the backend can verify`() = runBlocking {

@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.baliza.emergency.app.ContactProfile
 import com.baliza.emergency.app.EmergencyApp
+import com.baliza.emergency.app.InviteResult
 import com.baliza.emergency.ask.AskStart
 import com.baliza.emergency.pay.PayStart
 import com.baliza.emergency.pay.PaymentRequest
@@ -84,6 +85,21 @@ class BalizaViewModel(app: Application) : AndroidViewModel(app) {
         _payError.value = null
         viewModelScope.launch { engine.resetPay() }
     }
+    private val _inviteError = MutableStateFlow<String?>(null)
+    val inviteError: StateFlow<String?> = _inviteError.asStateFlow()
+
+    /** [open] gets the wa.me link on success; the screen opens it (it owns the activity). */
+    fun invite(engine: EmergencyApp.Engine, contactIndex: Int, open: (String) -> Unit) {
+        _inviteError.value = null
+        viewModelScope.launch {
+            when (val r = engine.inviteLink(contactIndex)) {
+                is InviteResult.Ready -> open(r.link)
+                is InviteResult.Failed -> _inviteError.value = r.message
+            }
+        }
+    }
+
+    fun clearInviteError() { _inviteError.value = null }
 
     fun cancelSos(engine: EmergencyApp.Engine) {
         viewModelScope.launch { engine.cancelSos() }

@@ -116,12 +116,17 @@ fun SosScreen(
     onResetAsk: () -> Unit,
     onPay: (PaymentRequest) -> Unit,
     onResetPay: () -> Unit,
+    canInvite: Boolean = false,
+    inviteError: String? = null,
+    onInvite: (Int) -> Unit = {},
+    onCloseInvite: () -> Unit = {},
     onStart: (category: Int, severity: Int, publicText: String, note: String, contacts: Set<Int>) -> Unit,
     onCancel: () -> Unit,
     onDismissError: () -> Unit,
     header: @Composable () -> Unit = {}
 ) {
     var confirmCancel by rememberSaveable { mutableStateOf(false) }
+    var inviting by rememberSaveable { mutableStateOf(false) }
     val active = SosLabels.active(status.state)
 
     Column(
@@ -167,6 +172,7 @@ fun SosScreen(
                         Chip(c.index in form.selected, { form.toggle(c.index) }, c.name, checkWhenSelected = true)
                     }
                 }
+                if (canInvite) TextButton(onClick = { inviting = true }) { Text("Invitar a tus contactos por WhatsApp") }
             }
             Section("Mensaje") {
                 OutlinedTextField(
@@ -203,6 +209,10 @@ fun SosScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+
+    if (inviting) {
+        InviteDialog(profile.contacts, inviteError, onInvite, onDismiss = { inviting = false; onCloseInvite() })
     }
 
     if (confirmCancel) {

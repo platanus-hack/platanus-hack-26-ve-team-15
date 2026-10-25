@@ -18,5 +18,8 @@ class EmergencyContact(
     }
 }
 
-/** Per-contact verification state returned by the backend. */
-class ContactStatus(val index: Int, val status: String)
+/**
+ * Per-contact verification state returned by the backend. [inviteCode] is what this contact sends as
+ * "ACEPTO <code>" to accept this user (docs/contrato.md §6); null if the contact has no phone.
+ */
+class ContactStatus(val index: Int, val status: String, val inviteCode: String? = null)

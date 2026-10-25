@@ -44,6 +44,13 @@ android {
             "BALIZA_API_URL",
             "\"${providers.gradleProperty("BALIZA_API_URL").orElse("").get()}\""
         )
+        // Baliza's WhatsApp number (international, e.g. +56920403095): where a contact's invite link sends
+        // "ACEPTO <code>". Empty hides the invite button.
+        buildConfigField(
+            "String",
+            "BALIZA_WHATSAPP_NUMBER",
+            "\"${providers.gradleProperty("BALIZA_WHATSAPP_NUMBER").orElse("").get()}\""
+        )
 
         testInstrumentationRunner = "com.bitchat.android.ui.PerformanceTestRunner"
         vectorDrawables {

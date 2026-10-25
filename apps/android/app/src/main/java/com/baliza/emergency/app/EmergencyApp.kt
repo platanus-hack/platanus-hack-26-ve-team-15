@@ -15,6 +15,8 @@ import com.baliza.emergency.identity.UserIdentity
 import com.baliza.emergency.crypto.SealedBox
 import com.baliza.emergency.identity.ServerKeys
 import com.baliza.emergency.identity.UserIdentityStore
+import com.baliza.emergency.registration.InviteLinks
+import com.baliza.emergency.registration.PrefsInviteStore
 import com.baliza.emergency.registration.RegistrationClient
 import com.baliza.emergency.ask.AskStart
 import com.baliza.emergency.ask.AskStatus
@@ -103,6 +105,7 @@ class EmergencyApp private constructor(context: Context) {
         private val identityStore = UserIdentityStore.create(appContext)
         private val contactStore = ContactStore.create(appContext)
         private val incidentStore: IncidentStore = PrefsIncidentStore.create(appContext)
+        private val inviteStore = PrefsInviteStore.create(appContext)
         private val identity = identityStore.loadOrCreate()
 
         private var attachedMesh: BluetoothMeshService? = null
@@ -236,8 +239,40 @@ class EmergencyApp private constructor(context: Context) {
             }
             val result = RegistrationRepository(identityStore, RegistrationClient(url))
                 .register(profile.displayName, profile.contacts)
-            if (result is RegistrationResult.Success) _registered.value = true
+            if (result is RegistrationResult.Success) {
+                saveInvites(result)
+                _registered.value = true
+            }
             return result
+        }
+
+        private fun saveInvites(result: RegistrationResult.Success): Map<Int, String> =
+            result.contacts.mapNotNull { c -> c.inviteCode?.let { c.index to it } }.toMap().also(inviteStore::save)
+
+        /** The WhatsApp number contacts accept at; blank in a build without it, which hides the invite button. */
+        val whatsappNumber: String get() = com.bitchat.android.BuildConfig.BALIZA_WHATSAPP_NUMBER
+
+        /**
+         * The link that opens the user's WhatsApp with an invitation for [contactIndex]: it carries the code of this
+         * relationship, so accepting it verifies this user only. A user registered before codes existed has none
+         * stored: registering again (it keeps every verification) fetches them, which needs internet once.
+         */
+        suspend fun inviteLink(contactIndex: Int): InviteResult {
+            if (whatsappNumber.isBlank()) return InviteResult.Failed("Esta versión no tiene el número de WhatsApp de Baliza.")
+            val profile = _profile.value ?: return InviteResult.Failed("Primero completa el registro.")
+            val phone = profile.contacts.firstOrNull { it.index == contactIndex }?.sms
+                ?: return InviteResult.Failed("Ese contacto no tiene teléfono.")
+            val code = inviteStore.load()[contactIndex] ?: refreshInvites(profile)[contactIndex]
+                ?: return InviteResult.Failed("Necesitas internet una vez para preparar la invitación.")
+            val text = InviteLinks.message(profile.displayName, InviteLinks.acceptLink(whatsappNumber, code))
+            return InviteLinks.shareLink(phone, text)?.let { InviteResult.Ready(it) }
+                ?: InviteResult.Failed("El teléfono de ese contacto no tiene números.")
+        }
+
+        private suspend fun refreshInvites(profile: ContactProfile): Map<Int, String> {
+            val url = settings.baseUrl.takeIf { it.isNotBlank() } ?: return emptyMap()
+            val result = RegistrationRepository(identityStore, RegistrationClient(url)).register(profile.displayName, profile.contacts)
+            return if (result is RegistrationResult.Success) saveInvites(result) else emptyMap()
         }
 
         suspend fun startSos(
@@ -331,4 +366,11 @@ class EmergencyApp private constructor(context: Context) {
         fun get(context: Context): EmergencyApp =
             instance ?: synchronized(this) { instance ?: EmergencyApp(context).also { instance = it } }
     }
+}
+
+sealed interface InviteResult {
+    /** A wa.me link to open: the user's WhatsApp, with the invitation written to the contact. */
+    class Ready(val link: String) : InviteResult
+
+    class Failed(val message: String) : InviteResult
 }
