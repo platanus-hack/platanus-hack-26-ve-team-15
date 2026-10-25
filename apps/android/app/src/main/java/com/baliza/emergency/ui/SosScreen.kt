@@ -76,6 +76,11 @@ fun SosScreen(
     ) {
         header()
 
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Box(Modifier.size(7.dp).clip(CircleShape).background(BalizaColors.Good))
+            Text("Malla BLE Activa · Cero datos requeridos", style = MaterialTheme.typography.labelSmall, color = BalizaColors.Good)
+        }
+
         if (replies.isNotEmpty()) RepliesCard(replies, names = profile.contacts.associate { it.index to it.name })
 
         if (active) {
@@ -86,22 +91,39 @@ fun SosScreen(
             Text("¿Qué pasa?", style = MaterialTheme.typography.titleMedium)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(SosLabels.categories) { (id, label) ->
-                    FilterChip(selected = form.category == id, onClick = { form.category = id }, label = { Text(label) })
+                    FilterChip(selected = form.category == id, onClick = { form.category = id }, label = { Text("${SosLabels.categoryIcon(id)} $label") })
                 }
             }
-            Text("Gravedad", style = MaterialTheme.typography.titleMedium)
+            Text("Nivel de gravedad", style = MaterialTheme.typography.titleMedium)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 for ((id, label) in SosLabels.severities) {
-                    FilterChip(selected = form.severity == id, onClick = { form.severity = id }, label = { Text(label) })
+                    val sevPrefix = when (id) { 1 -> "🟡 1 · "; 2 -> "🟠 2 · "; else -> "🔴 3 · " }
+                    FilterChip(selected = form.severity == id, onClick = { form.severity = id }, label = { Text("$sevPrefix$label") })
                 }
             }
-            Text("A quién avisar", style = MaterialTheme.typography.titleMedium)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("A quién avisar", style = MaterialTheme.typography.titleMedium)
+                Text("${form.selected.size} seleccionados", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (profile.contacts.size > 1) {
+                    item {
+                        val all = profile.contacts.all { it.index in form.selected }
+                        FilterChip(
+                            selected = all,
+                            onClick = {
+                                if (all) form.selected.clear() else form.selected.addAll(profile.contacts.map { it.index })
+                            },
+                            label = { Text("✓ Todos") }
+                        )
+                    }
+                }
                 items(profile.contacts) { c ->
+                    val sel = c.index in form.selected
                     FilterChip(
-                        selected = c.index in form.selected,
+                        selected = sel,
                         onClick = { form.toggle(c.index) },
-                        label = { Text(c.name) }
+                        label = { Text(if (sel) "✓ ${c.name}" else c.name) }
                     )
                 }
             }
@@ -112,11 +134,22 @@ fun SosScreen(
                 supportingText = { Text("${form.publicText.toByteArray(Charsets.UTF_8).size}/60") },
                 modifier = Modifier.fillMaxWidth()
             )
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                item {
+                    FilterChip(selected = false, onClick = { form.publicText = "No puedo moverme, herido en la zona" }, label = { Text("🚑 No puedo moverme") })
+                }
+                item {
+                    FilterChip(selected = false, onClick = { form.publicText = "Estoy atrapado, ayuda urgente" }, label = { Text("🪢 Estoy atrapado") })
+                }
+                item {
+                    FilterChip(selected = false, onClick = { form.publicText = "Hay heridos graves en el lugar" }, label = { Text("⚠️ Heridos graves") })
+                }
+            }
             OutlinedTextField(
                 value = form.note,
                 onValueChange = { if (it.toByteArray(Charsets.UTF_8).size <= SosSender.MAX_NOTE_BYTES) form.note = it },
-                label = { Text("Detalles para tus contactos (cifrado)") },
-                supportingText = { Text("${form.note.toByteArray(Charsets.UTF_8).size}/${SosSender.MAX_NOTE_BYTES}") },
+                label = { Text("Detalles para tus contactos (cifrado X25519)") },
+                supportingText = { Text("${form.note.toByteArray(Charsets.UTF_8).size}/${SosSender.MAX_NOTE_BYTES} · Solo lo abren tus contactos") },
                 modifier = Modifier.fillMaxWidth()
             )
             if (error != null) {
@@ -169,6 +202,48 @@ private fun SosButton(enabled: Boolean, onTriggered: () -> Unit) {
 }
 
 @Composable
+private fun MeshStepper(state: com.baliza.emergency.sos.SosState) {
+    val step1Done = state != com.baliza.emergency.sos.SosState.IDLE
+    val step2Done = state == com.baliza.emergency.sos.SosState.SENT || state == com.baliza.emergency.sos.SosState.UNCONFIRMED || state == com.baliza.emergency.sos.SosState.RECEIVED || state == com.baliza.emergency.sos.SosState.IN_PROGRESS || state == com.baliza.emergency.sos.SosState.CONTACTS_NOTIFIED
+    val step3Done = state == com.baliza.emergency.sos.SosState.RECEIVED || state == com.baliza.emergency.sos.SosState.IN_PROGRESS || state == com.baliza.emergency.sos.SosState.CONTACTS_NOTIFIED
+    val step4Done = state == com.baliza.emergency.sos.SosState.CONTACTS_NOTIFIED
+
+    Row(
+        Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).background(BalizaColors.SurfaceHigh).padding(horizontal = 12.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        StepNode("📱", "Tu Móvil", step1Done)
+        StepLine(step2Done)
+        StepNode("📡", "Malla BLE", step2Done)
+        StepLine(step3Done)
+        StepNode("🌐", "Egress", step3Done)
+        StepLine(step4Done)
+        StepNode("👥", "Familia", step4Done)
+    }
+}
+
+@Composable
+private fun StepNode(icon: String, label: String, done: Boolean) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Box(
+            Modifier.size(30.dp).clip(CircleShape).background(if (done) BalizaColors.Good.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(icon, fontSize = 14.sp)
+        }
+        Text(label, style = MaterialTheme.typography.labelSmall, color = if (done) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun androidx.compose.foundation.layout.RowScope.StepLine(done: Boolean) {
+    Box(
+        Modifier.weight(1f).height(2.dp).background(if (done) BalizaColors.Good else BalizaColors.Surface)
+    )
+}
+
+@Composable
 private fun StatusCard(status: SosStatus) {
     val tone = SosLabels.tone(status.state)
     val color = when (tone) {
@@ -178,16 +253,17 @@ private fun StatusCard(status: SosStatus) {
         SosLabels.Tone.NEUTRAL -> BalizaColors.Muted
     }
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(SosLabels.title(status.state), style = MaterialTheme.typography.titleLarge, color = color)
             Text(SosLabels.detail(status.state))
+            MeshStepper(status.state)
             if (tone == SosLabels.Tone.WAITING) {
                 LinearProgressIndicator(Modifier.fillMaxWidth(), color = color)
             }
-            Text(
-                "Intentos: ${status.attempts}",
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Intentos de radio: ${status.attempts}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("🛡️ Acuse firmado Ed25519", style = MaterialTheme.typography.bodySmall, color = BalizaColors.Good)
+            }
         }
     }
 }

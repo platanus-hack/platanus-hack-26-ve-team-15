@@ -12,6 +12,16 @@ object SosLabels {
         5 to "Desastre natural", 6 to "Atrapado o perdido", 7 to "Otra"
     )
 
+    fun categoryIcon(id: Int): String = when (id) {
+        1 -> "🩺"
+        2 -> "🔥"
+        3 -> "🛡️"
+        4 -> "🚗"
+        5 -> "🌊"
+        6 -> "🪢"
+        else -> "⚠️"
+    }
+
     val severities: List<Pair<Int, String>> = listOf(1 to "Moderada", 2 to "Grave", 3 to "Crítica")
 
     fun title(state: SosState): String = when (state) {

@@ -1,0 +1,947 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Baliza Vital · App Móvil</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --phone-bg: #111111;
+      --phone-surface: #1C1C1E;
+      --phone-surface-high: #2A2A2D;
+      --phone-red: #E53935;
+      --phone-red-dark: #8E1B1B;
+      --phone-good: #4CAF50;
+      --phone-waiting: #FFB300;
+      --phone-text: #F2F2F2;
+      --phone-muted: #A0A0A6;
+      --phone-outline: #3A3A3F;
+      --phone-accent: #06b6d4;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      height: 100%;
+      background: var(--phone-bg);
+      color: var(--phone-text);
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow-x: hidden;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    /* Floating Pill Switcher */
+    .view-switcher-pill {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(28, 28, 30, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 999px;
+      padding: 5px 8px;
+      display: flex;
+      gap: 5px;
+      z-index: 1000;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      max-width: calc(100vw - 32px);
+    }
+
+    .pill-btn {
+      background: none;
+      border: none;
+      color: var(--phone-muted);
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .pill-btn.active {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff;
+      box-shadow: 0 2px 10px rgba(2, 132, 199, 0.45);
+    }
+
+    .phone-container {
+      width: 100%;
+      max-width: 440px;
+      min-height: 100vh;
+      background: var(--phone-bg);
+      display: flex;
+      flex-direction: column;
+      padding-bottom: 74px;
+    }
+
+    @media (min-width: 601px) {
+      body {
+        background: #06080d;
+        padding: 24px 16px 40px;
+      }
+      .desktop-header {
+        max-width: 900px;
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding: 12px 20px;
+        background: rgba(18, 26, 44, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 14px;
+        backdrop-filter: blur(16px);
+      }
+      .desktop-header h1 {
+        font-size: 16px;
+        font-weight: 800;
+        color: #fff;
+      }
+      .desktop-header a {
+        color: #67e8f9;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 600;
+        padding: 6px 12px;
+        border-radius: 8px;
+        background: rgba(6, 182, 212, 0.12);
+        border: 1px solid rgba(6, 182, 212, 0.3);
+      }
+      .phone-container {
+        border-radius: 40px;
+        min-height: 780px;
+        height: 780px;
+        overflow-y: auto;
+        box-shadow: 0 25px 80px rgba(0, 0, 0, 0.9), 0 0 0 2px rgba(255, 255, 255, 0.12);
+        position: relative;
+      }
+      .fake-status-bar { display: flex !important; }
+    }
+
+    @media (max-width: 600px) {
+      .desktop-header { display: none; }
+      .fake-status-bar { display: none !important; }
+      .phone-container {
+        border-radius: 0;
+        box-shadow: none;
+      }
+    }
+
+    .fake-status-bar {
+      display: none;
+      height: 38px;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 22px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--phone-text);
+      background: var(--phone-bg);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .camera-notch {
+      width: 12px;
+      height: 12px;
+      background: #000;
+      border-radius: 50%;
+    }
+
+    .screen-content {
+      padding: 18px 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      flex: 1;
+    }
+
+    /* App Header & Mesh Active Pill */
+    .app-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .app-brand {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .app-brand h2 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .mesh-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #10b981;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 3px 9px;
+      border-radius: 999px;
+      width: fit-content;
+    }
+
+    .mesh-indicator .pulse-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+      animation: pulse 1.8s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.9); opacity: 1; }
+      50% { transform: scale(1.4); opacity: 0.4; }
+      100% { transform: scale(0.9); opacity: 1; }
+    }
+
+    .btn-debug {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--phone-outline);
+      color: #67e8f9;
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 5px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .section-title {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: var(--phone-text);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      letter-spacing: -0.01em;
+    }
+
+    .section-title small {
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--phone-muted);
+    }
+
+    /* Chips Row */
+    .chip-scroll {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .chip-scroll::-webkit-scrollbar { display: none; }
+
+    .chip {
+      background: var(--phone-surface);
+      border: 1px solid var(--phone-outline);
+      color: var(--phone-text);
+      font-size: 12.5px;
+      font-weight: 600;
+      padding: 7px 13px;
+      border-radius: 999px;
+      cursor: pointer;
+      white-space: nowrap;
+      user-select: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .chip.selected {
+      background: linear-gradient(135deg, #e53935 0%, #b71c1c 100%);
+      border-color: #ef4444;
+      color: #fff;
+      box-shadow: 0 0 14px rgba(229, 57, 53, 0.4);
+    }
+
+    .chip.selected-sev {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      border-color: #fb923c;
+      color: #fff;
+      box-shadow: 0 0 14px rgba(249, 115, 22, 0.4);
+    }
+
+    .chip.selected-contact {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      border-color: #38bdf8;
+      color: #fff;
+      box-shadow: 0 0 14px rgba(2, 132, 199, 0.4);
+    }
+
+    .chip.action-chip {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Template Chips Row */
+    .template-box {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: -4px;
+    }
+
+    .template-label {
+      font-size: 11px;
+      color: var(--phone-muted);
+      font-weight: 600;
+    }
+
+    .template-chip {
+      background: rgba(6, 182, 212, 0.08);
+      border: 1px dashed rgba(6, 182, 212, 0.35);
+      color: #67e8f9;
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 5px 10px;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .template-chip:hover, .template-chip:active {
+      background: rgba(6, 182, 212, 0.2);
+      border-style: solid;
+      color: #fff;
+    }
+
+    /* Text Inputs */
+    .input-field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .field-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11.5px;
+      color: var(--phone-muted);
+    }
+
+    .field-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .field-badge.public {
+      background: rgba(245, 158, 11, 0.12);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .field-badge.secure {
+      background: rgba(6, 182, 212, 0.12);
+      color: #67e8f9;
+      border: 1px solid rgba(6, 182, 212, 0.3);
+    }
+
+    .input-box {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--phone-outline);
+      border-radius: 12px;
+      padding: 12px 14px;
+      color: #fff;
+      font-size: 13.5px;
+      font-family: inherit;
+      width: 100%;
+      transition: border-color 0.2s ease;
+    }
+
+    .input-box:focus {
+      outline: none;
+      border-color: var(--phone-red);
+    }
+
+    .input-hint {
+      font-size: 11px;
+      color: var(--phone-muted);
+      text-align: right;
+    }
+
+    /* Giant SOS Button with Visual SVG Loading Ring */
+    .sos-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      margin: 10px 0 8px;
+    }
+
+    .sos-wrapper {
+      position: relative;
+      width: 210px;
+      height: 210px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .sos-ring {
+      position: absolute;
+      inset: 0;
+      transform: rotate(-90deg);
+      pointer-events: none;
+    }
+
+    .ring-bg {
+      fill: none;
+      stroke: rgba(255, 255, 255, 0.08);
+      stroke-width: 6;
+    }
+
+    .ring-progress {
+      fill: none;
+      stroke: #38bdf8;
+      stroke-width: 7;
+      stroke-linecap: round;
+      stroke-dasharray: 615;
+      stroke-dashoffset: 615;
+      filter: drop-shadow(0 0 8px #38bdf8);
+      transition: stroke-dashoffset 0.05s linear;
+    }
+
+    .sos-btn {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #ef4444 0%, #b91c1c 70%, #991b1b 100%);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 54px;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      border: 3px solid rgba(255, 255, 255, 0.25);
+      cursor: pointer;
+      box-shadow: 0 0 35px rgba(229, 57, 53, 0.5), inset 0 2px 6px rgba(255, 255, 255, 0.4);
+      user-select: none;
+      touch-action: manipulation;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      z-index: 5;
+    }
+
+    .sos-btn.pressing {
+      transform: scale(0.93);
+      box-shadow: 0 0 60px rgba(239, 68, 68, 0.8), inset 0 2px 10px rgba(0, 0, 0, 0.5);
+    }
+
+    .sos-subtitle {
+      font-size: 13px;
+      color: var(--phone-muted);
+      text-align: center;
+      font-weight: 600;
+      transition: color 0.2s ease;
+    }
+
+    /* Cards */
+    .phone-card {
+      background: var(--phone-surface);
+      border-radius: 16px;
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .phone-card h3 {
+      font-size: 15px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .phone-card p {
+      font-size: 12.5px;
+      line-height: 1.45;
+      color: #cbd5e1;
+    }
+
+    /* Visual Mesh Hop Stepper */
+    .mesh-stepper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--phone-outline);
+      border-radius: 14px;
+      padding: 14px 10px;
+      margin-top: 4px;
+    }
+
+    .step-node {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      text-align: center;
+      flex: 1;
+    }
+
+    .step-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--phone-outline);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .step-node.done .step-icon {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: #10b981;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+    }
+
+    .step-node.active .step-icon {
+      background: rgba(6, 182, 212, 0.25);
+      border-color: #38bdf8;
+      box-shadow: 0 0 12px rgba(6, 182, 212, 0.6);
+      animation: pulse 1.5s infinite;
+    }
+
+    .step-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: #cbd5e1;
+    }
+
+    .step-sub {
+      font-size: 9.5px;
+      color: var(--phone-muted);
+    }
+
+    .step-line {
+      height: 2px;
+      flex: 0.6;
+      background: var(--phone-outline);
+      margin-bottom: 14px;
+    }
+
+    .step-line.done {
+      background: #10b981;
+      box-shadow: 0 0 6px #10b981;
+    }
+
+    .cancel-btn {
+      width: 100%;
+      background: transparent;
+      border: 1px solid var(--phone-outline);
+      color: var(--phone-text);
+      padding: 13px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 13.5px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .cancel-btn:hover {
+      background: var(--phone-surface-high);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .reply-item {
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .reply-header {
+      font-size: 11.5px;
+      color: var(--phone-muted);
+    }
+    .reply-text {
+      font-size: 13.5px;
+      color: #fff;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="desktop-header">
+    <div>
+      <h1>📱 Simulador Visual del APK Android (Jetpack Compose)</h1>
+      <p style="font-size:12px; color:#94a3b8;">Interfaz nativa Material 3 según <code>apps/android/app/src/main/java/com/baliza/emergency/ui/</code></p>
+    </div>
+    <a href="/">← Volver al Panel de Monitoreo</a>
+  </header>
+
+  <div class="phone-container">
+    
+    <!-- Fake Status Bar (Visible only on Desktop) -->
+    <div class="fake-status-bar">
+      <span>18:14</span>
+      <div class="camera-notch"></div>
+      <span>📶 🔋 84%</span>
+    </div>
+
+    <!-- VISTA 1: SOS EN REPOSO -->
+    <div class="screen-content" id="view-idle">
+      <div class="app-header">
+        <div class="app-brand">
+          <h2>🚨 Baliza Vital</h2>
+          <div class="mesh-indicator">
+            <span class="pulse-dot"></span>
+            <span>Malla BLE Activa · 0 datos requeridos</span>
+          </div>
+        </div>
+        <button class="btn-debug" type="button">Depuración</button>
+      </div>
+
+      <!-- 1. Categorías con Iconos -->
+      <div>
+        <span class="section-title">¿Qué pasa?</span>
+        <div class="chip-scroll" style="margin-top:6px;">
+          <div class="chip selected" onclick="toggleChip(this)">🩺 Médica</div>
+          <div class="chip" onclick="toggleChip(this)">🚗 Accidente</div>
+          <div class="chip" onclick="toggleChip(this)">🔥 Incendio</div>
+          <div class="chip" onclick="toggleChip(this)">🛡️ Seguridad</div>
+          <div class="chip" onclick="toggleChip(this)">🌊 Desastre</div>
+          <div class="chip" onclick="toggleChip(this)">🪢 Atrapado</div>
+          <div class="chip" onclick="toggleChip(this)">⚠️ Otra</div>
+        </div>
+      </div>
+
+      <!-- 2. Gravedad -->
+      <div>
+        <span class="section-title">Nivel de gravedad</span>
+        <div class="chip-scroll" style="margin-top:6px;">
+          <div class="chip" onclick="selectSev(this, 1)">🟡 1 · Moderada</div>
+          <div class="chip" onclick="selectSev(this, 2)">🟠 2 · Grave</div>
+          <div class="chip selected-sev" onclick="selectSev(this, 3)">🔴 3 · Crítica</div>
+        </div>
+      </div>
+
+      <!-- 3. Contactos con chip "✓ Todos" -->
+      <div>
+        <div class="section-title">
+          <span>A quién avisar</span>
+          <small id="contact-count">2 seleccionados</small>
+        </div>
+        <div class="chip-scroll" style="margin-top:6px;">
+          <div class="chip action-chip" id="chip-all-contacts" onclick="toggleAllContacts(this)">✓ Todos</div>
+          <div class="chip selected-contact" onclick="toggleContact(this)">✓ Mamá</div>
+          <div class="chip selected-contact" onclick="toggleContact(this)">✓ Alejandro Meneses</div>
+          <div class="chip" onclick="toggleContact(this)">Hermano</div>
+        </div>
+      </div>
+
+      <!-- 4. Mensaje Público con Plantillas Rápidas -->
+      <div class="input-field">
+        <div class="field-header">
+          <span>Mensaje corto público</span>
+          <span class="field-badge public">📡 Visible en radio</span>
+        </div>
+        <input class="input-box" id="input-public" type="text" value="SOS médico, necesito ayuda en la zona" maxlength="60">
+        <div class="template-box">
+          <span class="template-label">⚡ Frases rápidas para emergencia:</span>
+          <div class="chip-scroll">
+            <button type="button" class="template-chip" onclick="applyTemplate('No puedo moverme, herido en la zona')">🚑 No puedo moverme</button>
+            <button type="button" class="template-chip" onclick="applyTemplate('Estoy atrapado, ayuda urgente')">🪢 Estoy atrapado</button>
+            <button type="button" class="template-chip" onclick="applyTemplate('Hay personas inconscientes')">⚠️ Heridos graves</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Nota Confidencial Cifrada -->
+      <div class="input-field">
+        <div class="field-header">
+          <span>Detalles para tus contactos</span>
+          <span class="field-badge secure">🔒 Cifrado X25519</span>
+        </div>
+        <input class="input-box" type="text" value="Alérgico a la penicilina. Sangre O+" maxlength="204" placeholder="Solo lo leen tus contactos elegidos">
+        <span class="input-hint">Solo se descifra con la clave privada del servidor</span>
+      </div>
+
+      <!-- 6. Botón SOS con Anillo SVG de Progreso -->
+      <div class="sos-container">
+        <div class="sos-wrapper">
+          <svg class="sos-ring" width="210" height="210" viewBox="0 0 210 210">
+            <circle class="ring-bg" cx="105" cy="105" r="98" />
+            <circle class="ring-progress" id="ring-progress" cx="105" cy="105" r="98" />
+          </svg>
+          <button class="sos-btn" id="sos-trigger" type="button">SOS</button>
+        </div>
+        <p class="sos-subtitle" id="sos-hint">Mantén pulsado para pedir ayuda</p>
+      </div>
+    </div>
+
+    <!-- VISTA 2: SOS TRANSMITIENDO / ACTIVO -->
+    <div class="screen-content" id="view-active" style="display:none;">
+      <div class="app-header">
+        <div class="app-brand">
+          <h2>🚨 Baliza Vital</h2>
+          <div class="mesh-indicator" style="color:#f59e0b; background:rgba(245, 158, 11, 0.12); border-color:rgba(245, 158, 11, 0.3);">
+            <span class="pulse-dot" style="background:#f59e0b; box-shadow:0 0 8px #f59e0b;"></span>
+            <span>SOS Activo transmitiendo</span>
+          </div>
+        </div>
+        <button class="btn-debug" type="button">Depuración</button>
+      </div>
+
+      <!-- Stepper Visual del Mesh (La Joya para el Jurado) -->
+      <div class="phone-card">
+        <h3 style="color:#38bdf8;">📡 Camino del Paquete SOS</h3>
+        <p>Tu paquete de 418 bytes viaja de teléfono en teléfono por Bluetooth BLE sin necesidad de internet celular.</p>
+        
+        <div class="mesh-stepper">
+          <div class="step-node done">
+            <div class="step-icon">📱</div>
+            <span class="step-label">Tu Móvil</span>
+            <span class="step-sub">Emitido</span>
+          </div>
+          <div class="step-line done"></div>
+          <div class="step-node active">
+            <div class="step-icon">📡</div>
+            <span class="step-label">Malla BLE</span>
+            <span class="step-sub">2 Saltos</span>
+          </div>
+          <div class="step-line"></div>
+          <div class="step-node">
+            <div class="step-icon">🌐</div>
+            <span class="step-label">Egress</span>
+            <span class="step-sub">Puente Celular</span>
+          </div>
+          <div class="step-line"></div>
+          <div class="step-node">
+            <div class="step-icon">👥</div>
+            <span class="step-label">Familia</span>
+            <span class="step-sub">Avisados</span>
+          </div>
+        </div>
+
+        <div style="font-size:11.5px; color:var(--phone-muted); display:flex; justify-content:space-between; margin-top:4px;">
+          <span>Intentos de radio: <b>3</b></span>
+          <span style="color:#10b981;">🛡️ Acuse firmado por servidor</span>
+        </div>
+      </div>
+
+      <!-- Tarjeta de Respuestas de Familiares -->
+      <div class="phone-card" style="border-left: 4px solid var(--phone-good);">
+        <h3 style="color:var(--phone-good);">💬 Respuestas de tus contactos</h3>
+        <div class="reply-item">
+          <span class="reply-header">Alejandro Meneses · WhatsApp · 18:18</span>
+          <span class="reply-text">Ya avisé a la ambulancia, quédate ahí tranquilo.</span>
+        </div>
+      </div>
+
+      <!-- Consulta de Emergencia Offline -->
+      <div class="phone-card">
+        <h3 style="font-size:14px; color:#38bdf8;">⚡ Consulta de Contingencia</h3>
+        <p style="font-size:12px;">Envía una pregunta breve por el mesh a la IA del servidor.</p>
+        <input class="input-box" type="text" placeholder="¿Dónde está el punto de auxilio más cercano?" style="margin-top:4px; font-size:12.5px;">
+      </div>
+
+      <button class="cancel-btn" type="button" onclick="showScreen('idle')">Cancelar aviso</button>
+    </div>
+
+    <!-- VISTA 3: REGISTRO INICIAL -->
+    <div class="screen-content" id="view-reg" style="display:none;">
+      <h2 style="font-size:22px; font-weight:800; margin-bottom:2px;">Configura tu baliza</h2>
+      <p style="font-size:13px; color:var(--phone-muted); line-height:1.4;">
+        Necesitas internet una sola vez para registrar a quién avisar. Después, tu SOS saldrá aunque no haya red.
+      </p>
+
+      <div class="input-field" style="margin-top:8px;">
+        <label style="font-size:12px; color:var(--phone-muted); font-weight:600;">Tu nombre</label>
+        <input class="input-box" type="text" value="Gregory">
+      </div>
+
+      <div class="phone-card">
+        <span style="font-size:13px; font-weight:700; color:#fff;">Contacto 1 (Emergencia)</span>
+        <input class="input-box" type="text" value="Mamá" placeholder="Nombre">
+        <input class="input-box" type="tel" value="+584128848224" placeholder="Teléfono (+58...)">
+        <input class="input-box" type="email" value="mama@gmail.com" placeholder="Correo (opcional)">
+      </div>
+
+      <div class="phone-card">
+        <span style="font-size:13px; font-weight:700; color:#fff;">Contacto 2 (Soporte)</span>
+        <input class="input-box" type="text" value="Alejandro Meneses" placeholder="Nombre">
+        <input class="input-box" type="tel" value="+584123098258" placeholder="Teléfono (+58...)">
+        <input class="input-box" type="email" placeholder="Correo (opcional)">
+      </div>
+
+      <button class="cancel-btn" style="background:var(--phone-red); border-color:var(--phone-red); color:#fff; font-weight:700;" type="button" onclick="showScreen('idle')">
+        Guardar y registrar baliza
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Bottom Floating Switcher Pill -->
+  <nav class="view-switcher-pill" aria-label="Cambiar pantalla">
+    <button class="pill-btn active" id="pill-idle" type="button" onclick="showScreen('idle')">Reposo</button>
+    <button class="pill-btn" id="pill-active" type="button" onclick="showScreen('active')">SOS Activo</button>
+    <button class="pill-btn" id="pill-reg" type="button" onclick="showScreen('reg')">Registro</button>
+  </nav>
+
+  <script>
+    function showScreen(tab) {
+      document.getElementById('view-idle').style.display = tab === 'idle' ? 'flex' : 'none';
+      document.getElementById('view-active').style.display = tab === 'active' ? 'flex' : 'none';
+      document.getElementById('view-reg').style.display = tab === 'reg' ? 'flex' : 'none';
+
+      document.getElementById('pill-idle').classList.toggle('active', tab === 'idle');
+      document.getElementById('pill-active').classList.toggle('active', tab === 'active');
+      document.getElementById('pill-reg').classList.toggle('active', tab === 'reg');
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function toggleChip(el) {
+      el.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    function selectSev(el, sev) {
+      el.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('selected-sev'));
+      el.classList.add('selected-sev');
+    }
+
+    function toggleContact(el) {
+      el.classList.toggle('selected-contact');
+      if (el.classList.contains('selected-contact')) {
+        if (!el.textContent.startsWith('✓')) el.textContent = '✓ ' + el.textContent;
+      } else {
+        el.textContent = el.textContent.replace('✓ ', '');
+      }
+      updateContactCount();
+    }
+
+    function toggleAllContacts(btnAll) {
+      const contacts = document.querySelectorAll('.chip-scroll:nth-of-type(1) .chip:not(#chip-all-contacts)');
+      // If some or all are selected, toggle
+      const contactChips = Array.from(document.querySelectorAll('#view-idle .chip-scroll')).find(row => row.querySelector('#chip-all-contacts'))?.querySelectorAll('.chip:not(#chip-all-contacts)');
+      if (!contactChips) return;
+      const allSelected = Array.from(contactChips).every(c => c.classList.contains('selected-contact'));
+      contactChips.forEach(c => {
+        if (allSelected) {
+          c.classList.remove('selected-contact');
+          c.textContent = c.textContent.replace('✓ ', '');
+        } else {
+          c.classList.add('selected-contact');
+          if (!c.textContent.startsWith('✓')) c.textContent = '✓ ' + c.textContent;
+        }
+      });
+      updateContactCount();
+    }
+
+    function updateContactCount() {
+      const selected = document.querySelectorAll('.chip-scroll .selected-contact').length;
+      const lbl = document.getElementById('contact-count');
+      if (lbl) lbl.textContent = `${selected} ${selected === 1 ? 'seleccionado' : 'seleccionados'}`;
+    }
+
+    function applyTemplate(text) {
+      const input = document.getElementById('input-public');
+      if (input) {
+        input.value = text;
+        input.focus();
+      }
+    }
+
+    // Circular SVG Progress Ring & Long Press Animation (850ms)
+    const btn = document.getElementById('sos-trigger');
+    const ring = document.getElementById('ring-progress');
+    const hint = document.getElementById('sos-hint');
+    const maxCircumference = 615; // 2 * PI * 98
+    let pressStartTime = 0;
+    let animFrame = null;
+    const requiredDuration = 850; // ms
+
+    function animateRing() {
+      const elapsed = Date.now() - pressStartTime;
+      const progress = Math.min(elapsed / requiredDuration, 1);
+      const offset = maxCircumference * (1 - progress);
+      ring.style.strokeDashoffset = offset;
+
+      if (progress < 1) {
+        animFrame = requestAnimationFrame(animateRing);
+      } else {
+        // Completed hold!
+        if (navigator.vibrate) navigator.vibrate([60, 100, 200]);
+        btn.classList.remove('pressing');
+        ring.style.strokeDashoffset = maxCircumference;
+        hint.textContent = '¡SOS ENVIADO A LA MALLA!';
+        hint.style.color = '#10b981';
+        setTimeout(() => {
+          showScreen('active');
+          hint.textContent = 'Mantén pulsado para pedir ayuda';
+          hint.style.color = '';
+        }, 300);
+      }
+    }
+
+    function startPress(e) {
+      pressStartTime = Date.now();
+      btn.classList.add('pressing');
+      hint.textContent = '¡Mantén presionado... enviando!';
+      hint.style.color = '#f87171';
+      ring.style.strokeDashoffset = maxCircumference;
+      animFrame = requestAnimationFrame(animateRing);
+    }
+
+    function cancelPress() {
+      if (animFrame) cancelAnimationFrame(animFrame);
+      btn.classList.remove('pressing');
+      ring.style.strokeDashoffset = maxCircumference;
+      if (Date.now() - pressStartTime < requiredDuration) {
+        hint.textContent = 'Mantén pulsado para pedir ayuda';
+        hint.style.color = '';
+      }
+    }
+
+    btn.addEventListener('mousedown', startPress);
+    btn.addEventListener('mouseup', cancelPress);
+    btn.addEventListener('mouseleave', cancelPress);
+    btn.addEventListener('touchstart', startPress, { passive: true });
+    btn.addEventListener('touchend', cancelPress);
+    btn.addEventListener('touchcancel', cancelPress);
+  </script>
+</body>
+</html>
