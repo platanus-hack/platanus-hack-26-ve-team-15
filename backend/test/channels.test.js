@@ -45,6 +45,16 @@ test('Kapso: fuera de la ventana de 24 h envía la plantilla primero, con la URL
     ['Usuario Demo', 'médica', '3/3', 'https://maps.example/?q=1,2', 'https://x/r/abc']);
 });
 
+test('Kapso: un número local de la agenda (0414…) se envía con el código de país y abre la ventana de quien escribió', async () => {
+  const { ch, store, calls } = kapso({}, () => ({ json: { messages: [{ id: 'wamid.LOC' }] } }));
+  store.touchWaInbound('584148539491', NOW - 60); // WhatsApp nos da el remitente con código de país
+  const r = await ch.sms.send({ ...msg, to: '04148539491' });
+  const body = JSON.parse(calls[0].body);
+  assert.equal(body.to, '584148539491', 'Kapso solo acepta el número con código de país');
+  assert.equal(body.type, 'text', 'la ventana abierta por 584148539491 vale para el contacto guardado como 0414…');
+  assert.equal(r.state, 'sent');
+});
+
 test('Kapso: dentro de la ventana (el contacto nos escribió hace < 24 h) envía texto libre', async () => {
   const { ch, store, calls } = kapso({}, () => ({ json: { messages: [{ id: 'wamid.BBB' }] } }));
   store.touchWaInbound('580000000001', NOW - 3600);

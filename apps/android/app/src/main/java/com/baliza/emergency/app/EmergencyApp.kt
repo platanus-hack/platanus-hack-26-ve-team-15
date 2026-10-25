@@ -15,7 +15,9 @@ import com.baliza.emergency.identity.UserIdentity
 import com.baliza.emergency.crypto.SealedBox
 import com.baliza.emergency.identity.ServerKeys
 import com.baliza.emergency.identity.UserIdentityStore
+import com.baliza.emergency.registration.EmergencyContact
 import com.baliza.emergency.registration.InviteLinks
+import com.baliza.emergency.registration.PhoneNumbers
 import com.baliza.emergency.registration.PrefsInviteStore
 import com.baliza.emergency.registration.RegistrationClient
 import com.baliza.emergency.ask.AskStart
@@ -240,7 +242,9 @@ class EmergencyApp private constructor(context: Context) {
         }
 
         /** Saves the contacts locally first, so a failed attempt (no internet) is not lost. */
-        suspend fun register(profile: ContactProfile): RegistrationResult {
+        suspend fun register(input: ContactProfile): RegistrationResult {
+            // Typed or from the address book, a local "0414…" becomes "+58414…": the form WhatsApp sends to.
+            val profile = withInternationalPhones(input)
             contactStore.save(profile)
             _profile.value = profile
             val url = settings.baseUrl
@@ -259,6 +263,18 @@ class EmergencyApp private constructor(context: Context) {
             }
             return result
         }
+
+        private fun withInternationalPhones(profile: ContactProfile) = ContactProfile(
+            profile.displayName,
+            profile.contacts.map { c ->
+                EmergencyContact(
+                    c.index, c.name, c.relation, c.lang,
+                    sms = c.sms?.let(PhoneNumbers::international)?.ifBlank { null },
+                    email = c.email,
+                    voice = c.voice?.let(PhoneNumbers::international)?.ifBlank { null }
+                )
+            }
+        )
 
         private fun saveInvites(result: RegistrationResult.Success): Map<Int, String> =
             result.contacts.mapNotNull { c -> c.inviteCode?.let { c.index to it } }.toMap().also(inviteStore::save)
