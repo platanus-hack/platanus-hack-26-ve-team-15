@@ -1,10 +1,10 @@
-# CLAUDE.md — Baliza Vital
+# CLAUDE.md — Meshy
 
 @AGENTS.md
 
 ---
 
-## Proyecto: Baliza Vital
+## Proyecto: Meshy
 
 Hackathon de emergencias (Platanus Hack 26, equipo 15). App Android **offline**: un teléfono sin
 internet envía un SOS y mensajes que saltan por un mesh Bluetooth hasta un teléfono con internet
@@ -13,7 +13,7 @@ contactos de emergencia (SMS, correo y llamada con voz IA) y devuelve confirmaci
 respuestas por el mesh. A futuro, el mesh y el SOS serán un módulo embebible para superapps de
 transporte, delivery y pagos.
 
-Baliza Vital **no es un fork de la app de bitchat** en lo visual: se rediseñará la interfaz (nombre e
+Meshy **no es un fork de la app de bitchat** en lo visual: se rediseñará la interfaz (nombre e
 icono ya propios) y solo se reutiliza su estructura y su mesh. La base del mesh es [bitchat-android](https://github.com/permissionlesstech/bitchat-android)
 (GPL-3.0, Kotlin/Compose), integrada como copia limpia en `apps/android/`.
 

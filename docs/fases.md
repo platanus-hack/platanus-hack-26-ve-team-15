@@ -1,4 +1,4 @@
-# Fases de Baliza Vital
+# Fases de Meshy
 
 Cada fase se entrega y se prueba antes de pasar a la siguiente. Los roles no se asignan a
 personas todavía; se usan estos cuatro:

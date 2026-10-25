@@ -1,4 +1,4 @@
-// Panel de Baliza Vital: lista, mapa en vivo y detalle de incidentes. Sin dependencias salvo Leaflet.
+// Panel de Meshy: lista, mapa en vivo y detalle de incidentes. Sin dependencias salvo Leaflet.
 // Todo texto que viene del backend (nota, texto público, nombres) se inserta con textContent, nunca como HTML.
 
 const SEV = { 3: ['Grave', 'var(--sev3)'], 2: ['Alta', 'var(--sev2)'], 1: ['Media', 'var(--sev1)'], 0: ['Cerrado', 'var(--closed)'] };

@@ -181,10 +181,10 @@ function mapUrl(i) {
 function templateText({ user, incident, note, map, reply, lang }) {
   const cat = labelOf(incident.category);
   if (lang === 'en') {
-    return `Baliza Vital ALERT: ${user.display_name} asked for help (${cat}, severity ${incident.severity}/3).`
+    return `Meshy ALERT: ${user.display_name} asked for help (${cat}, severity ${incident.severity}/3).`
       + `${note ? ` Note: ${note}.` : ''}${map ? ` Location: ${map}.` : ''} Reply here: ${reply}`;
   }
-  return `ALERTA Baliza Vital: ${user.display_name} pidió ayuda (${cat}, gravedad ${incident.severity}/3).`
+  return `ALERTA Meshy: ${user.display_name} pidió ayuda (${cat}, gravedad ${incident.severity}/3).`
     + `${note ? ` Nota: ${note}.` : ''}${map ? ` Ubicación: ${map}.` : ''} Responde aquí: ${reply}`;
 }
 
@@ -238,7 +238,7 @@ function alertFields(s, reply) {
 async function deliver(s, contact, addr, reply) {
   try {
     const text = await contactText(s, contact, reply);
-    const r = await s.channel.send({ to: addr, subject: `Baliza Vital: ${s.user.display_name} necesita ayuda`, text,
+    const r = await s.channel.send({ to: addr, subject: `Meshy: ${s.user.display_name} necesita ayuda`, text,
       kind: s.mensaje ? 'message' : 'alert', fields: alertFields(s, reply), lang: langOf(contact), contactName: contact.name, incident: s.incident });
     return { state: r.state, detail: r.detail };
   } catch (e) {

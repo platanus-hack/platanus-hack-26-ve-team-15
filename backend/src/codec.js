@@ -1,4 +1,4 @@
-// Paquete interno de Baliza Vital (contrato §3). Todo en big-endian.
+// Paquete interno de Meshy (contrato §3). Todo en big-endian.
 import { createHash, createPublicKey, sign, verify } from 'node:crypto';
 
 export const VERSION = 1;

@@ -2,7 +2,7 @@
   "name": "baliza-vital",
   "version": "1.0.0",
   "private": true,
-  "description": "Baliza Vital: offline SOS over a Bluetooth mesh. Root scripts run the agent-harness gates; Android is built with apps/android/tools/docker-gradle.sh.",
+  "description": "Meshy: offline SOS over a Bluetooth mesh. Root scripts run the agent-harness gates; Android is built with apps/android/tools/docker-gradle.sh.",
   "scripts": {
     "test": "npm run check:vectors && node --test scripts/agent-shield.test.js",
     "test:backend": "npm --prefix backend test",

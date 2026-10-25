@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Emula a un teléfono sin internet que consulta a la IA (CMD `preguntar_ia`) contra un servidor Baliza Vital:
+// Emula a un teléfono sin internet que consulta a la IA (CMD `preguntar_ia`) contra un servidor Meshy:
 // registra al usuario sintético, abre un incidente, envía el CMD sellado como lo haría el egress y espera el
 // CMD_RESULT en el buzón, que abre con la llave del usuario.
 //

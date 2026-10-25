@@ -73,8 +73,8 @@ function receiptText(p, { parts, feeBps, availableAfter, refCode }) {
 function recipientText(ctx, senderId, p, refCode) {
   const payer = oneLine(ctx.store.getUser(senderId)?.display_name ?? '').slice(0, MAX_PAYER_CHARS) || 'Un usuario';
   const text = p.kind === 'pagar'
-    ? `Baliza Vital: ${payer} te envió un Pago Móvil adelantado de ${usd(p.cents)} (${p.concept}). Ref ${refCode}. Es una simulación de demostración, no un pago real.`
-    : `Baliza Vital: se simuló una recarga de ${usd(p.cents)} (${p.operator}) a tu línea. Ref ${refCode}. Demostración: no es una recarga real.`;
+    ? `Meshy: ${payer} te envió un Pago Móvil adelantado de ${usd(p.cents)} (${p.concept}). Ref ${refCode}. Es una simulación de demostración, no un pago real.`
+    : `Meshy: se simuló una recarga de ${usd(p.cents)} (${p.operator}) a tu línea. Ref ${refCode}. Demostración: no es una recarga real.`;
   return text.slice(0, WHATSAPP_TEXT_CHARS);
 }
 
@@ -85,7 +85,7 @@ function notifyRecipient(ctx, senderId, p, refCode) {
   const text = recipientText(ctx, senderId, p, refCode);
   ctx.defer(() => sms.send({
     to: p.phone, text, kind: 'message', lang: 'es', contactName: p.phone,
-    fields: { userName: 'Baliza Vital', text, reply: '-' }, incident: { incident_id: null },
+    fields: { userName: 'Meshy', text, reply: '-' }, incident: { incident_id: null },
   }));
 }
 

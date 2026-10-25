@@ -12,7 +12,7 @@ server.keepAliveTimeout = 65_000; // mayor que el de los balanceadores (Render: 
 
 server.listen(ctx.config.port, '0.0.0.0', () => {
   const { config, keys, log } = ctx;
-  log(`Baliza Vital backend en :${config.port}  (server sender_id ${keys.senderId})`);
+  log(`Meshy backend en :${config.port}  (server sender_id ${keys.senderId})`);
   log(`  sign_pk_b64=${keys.signPk.toString('base64')}`);
   log(`  FEATURE_PAYMENTS=${config.featurePayments} FEATURE_RIDES=${config.featureRides}`);
   log(`  texto: ${providerOf(ctx.channels.sms)}, correo: ${providerOf(ctx.channels.email)}, voz: ${providerOf(ctx.channels.voice)}`);

@@ -1,6 +1,6 @@
 # 02 · C4 nivel 2: contenedores
 
-Las piezas desplegables de Baliza Vital y cómo se hablan: la app Android en capas (UI, módulo Baliza,
+Las piezas desplegables de Meshy y cómo se hablan: la app Android en capas (UI, módulo Baliza,
 `EmergencyMeshTransport`, mesh de bitchat), el backend en módulos, la base de datos y el dashboard.
 Muestra qué existe ya en el código y qué está propuesto.
 
