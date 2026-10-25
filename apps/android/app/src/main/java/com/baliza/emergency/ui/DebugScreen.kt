@@ -91,7 +91,7 @@ fun DebugScreen(vm: BalizaViewModel, engine: EmergencyApp.Engine, onBack: () -> 
             androidx.compose.material3.AlertDialog(
                 onDismissRequest = { confirmReset = false },
                 title = { Text("¿Borrar todo?") },
-                text = { Text("Se pierde tu identidad en la baliza y tendrás que registrarte de nuevo.") },
+                text = { Text("Se pierde tu identidad en Meshy y tendrás que registrarte de nuevo.") },
                 confirmButton = { Button(onClick = { confirmReset = false; vm.resetForTesting(engine) }) { Text("Borrar") } },
                 dismissButton = { TextButton(onClick = { confirmReset = false }) { Text("No") } }
             )

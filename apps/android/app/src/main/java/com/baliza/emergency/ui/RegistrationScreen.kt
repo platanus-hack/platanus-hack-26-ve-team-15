@@ -120,7 +120,7 @@ fun RegistrationScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         BalizaBrand()
-        Text("Configura tu baliza", style = MaterialTheme.typography.headlineMedium)
+        Text("Configura Meshy", style = MaterialTheme.typography.headlineMedium)
         Text(
             "Necesitas internet una sola vez para registrar a quién avisar. Después, tu SOS saldrá aunque no haya red.",
             color = MaterialTheme.colorScheme.onSurfaceVariant

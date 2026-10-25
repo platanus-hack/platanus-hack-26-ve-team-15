@@ -272,7 +272,7 @@ class EmergencyApp private constructor(context: Context) {
          * stored: registering again (it keeps every verification) fetches them, which needs internet once.
          */
         suspend fun inviteLink(contactIndex: Int): InviteResult {
-            if (whatsappNumber.isBlank()) return InviteResult.Failed("Esta versión no tiene el número de WhatsApp de Baliza.")
+            if (whatsappNumber.isBlank()) return InviteResult.Failed("Esta versión no tiene el número de WhatsApp de Meshy.")
             val profile = _profile.value ?: return InviteResult.Failed("Primero completa el registro.")
             val phone = profile.contacts.firstOrNull { it.index == contactIndex }?.sms
                 ?: return InviteResult.Failed("Ese contacto no tiene teléfono.")
