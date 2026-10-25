@@ -32,16 +32,29 @@ conexión. Justo cuando más se necesita avisar a alguien, el teléfono no puede
 
 ## Estado
 
-- Base Android (bitchat-android v2.0.3) integrada y compilando, con pruebas unitarias en verde.
-- Contrato del protocolo, APIs y plan por fases definidos en `docs/contrato.md` y `docs/fases.md`.
-- En construcción: tipo de mensaje de emergencia sobre la malla, backend de egress y buzón, agente de IA
-  y panel con mapa en vivo.
+Probado en teléfonos reales contra el servidor de producción (Render), el 25 de octubre:
+
+- **SOS sin internet**: un teléfono en modo avión envía el SOS por Bluetooth; otro teléfono con Meshy y
+  conexión lo sube al servidor, y la confirmación vuelve al primero ("contactos avisados" en ~20 s).
+- **Con un intermediario**: también a través de un tercer teléfono sin internet (A → M → C), ida y vuelta;
+  el servidor registra el salto.
+- **IA sin internet**: una pregunta de primeros auxilios viaja por la malla y la respuesta vuelve en segundos.
+- **WhatsApp real** (Kapso): el usuario invita a cada contacto desde su propio WhatsApp; el contacto acepta
+  con un código que solo vale para esa relación y recibe los avisos.
+- Panel con mapa, saltos y estado de cada aviso. Pruebas automáticas en verde en la app y en el backend.
 
 ## Límites
 
-El alcance de la malla Bluetooth es local (decenas de metros por salto). Las distancias largas
-dependen de que las personas se muevan y de que el servidor empuje las respuestas a nodos cercanos.
-Meshy **no reemplaza a los servicios de emergencia** y en este demo solo usa datos sintéticos.
+- **Enlaces Bluetooth que se atascan**: tras unos minutos, un enlace puede quedar en un solo sentido
+  cuando Android pierde la confirmación de un envío y la cola de ese enlace se llena. Lo que sube sigue
+  llegando, pero las confirmaciones y respuestas no bajan hasta reabrir la app en el teléfono con internet.
+  Causa identificada; el arreglo (temporizador por envío y reconexión del enlace) queda como siguiente paso.
+- **WhatsApp en modo de pruebas (sandbox)**: cada contacto necesita activar una sesión de prueba antes. En
+  producción, con número propio de WhatsApp Business, acepta con un solo toque.
+- La llamada con voz IA, los pagos y el microcrédito están simulados.
+- El alcance de la malla es local (decenas de metros por salto). Las distancias largas dependen de que las
+  personas se muevan y de que el servidor empuje las respuestas a nodos cercanos.
+- Meshy **no reemplaza a los servicios de emergencia**.
 
 ## Equipo
 
