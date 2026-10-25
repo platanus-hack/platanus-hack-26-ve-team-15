@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "API egress, buzón, registro, incidentes y agente de Baliza Vital",
+  "description": "API egress, buzón, registro, incidentes y agente de Meshy",
   "engines": {
     "node": ">=22.13"
   },

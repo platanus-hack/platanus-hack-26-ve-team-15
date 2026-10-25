@@ -34,7 +34,7 @@ function parseIncident(ctx, json) {
 function outgoing({ digits, text, incident }) {
   return {
     to: digits, text, kind: 'message', lang: 'es', contactName: digits,
-    fields: { userName: 'Baliza Vital', text, reply: '-' }, incident: incident ?? { incident_id: null },
+    fields: { userName: 'Meshy', text, reply: '-' }, incident: incident ?? { incident_id: null },
   };
 }
 

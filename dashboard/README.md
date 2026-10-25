@@ -1,4 +1,4 @@
-# Panel de Baliza Vital
+# Panel de Meshy
 
 Mapa en vivo y lista de incidentes. Sitio estático (HTML + CSS + JS, sin paso de compilación); Leaflet va incluido
 en `vendor/` (licencia BSD-2). Los mosaicos del mapa (CARTO / OpenStreetMap) sí necesitan internet.

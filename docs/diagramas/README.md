@@ -1,4 +1,4 @@
-# Diagramas de Baliza Vital
+# Diagramas de Meshy
 
 Diagramas del sistema en Mermaid. GitHub los renderiza directo. Cada archivo trae su propósito, el
 diagrama y una sección "Supuestos / decisiones abiertas". Los PNG para las láminas están en

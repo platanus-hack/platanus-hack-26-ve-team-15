@@ -1,6 +1,6 @@
 # 01 · C4 nivel 1: contexto
 
-Quién usa Baliza Vital y con qué sistemas externos habla. El mesh BLE lleva el paquete del
+Quién usa Meshy y con qué sistemas externos habla. El mesh BLE lleva el paquete del
 teléfono sin internet hasta un egress, y el backend, junto al agente IA, avisa a los contactos y responde por el mismo camino.
 
 Estado: **propuesto**. Sincronizado con `6f254e6`: los proveedores son los que usa
@@ -17,12 +17,12 @@ flowchart LR
   superapps["Superapps de transporte,<br/>delivery y pagos<br/>[Externo · a futuro]"]:::future
 
   subgraph mesh["Mesh BLE de bitchat · EMERGENCY 0x30"]
-    usuario["Usuario sin internet<br/>[Persona · app Baliza Vital]<br/>Emite SOS, UPDATE,<br/>MSG_OUT y CMD"]:::person
-    relay["Nodo relay<br/>[Persona · app Baliza Vital]<br/>Reenvía con TTL − 1,<br/>no abre lo sellado"]:::person
+    usuario["Usuario sin internet<br/>[Persona · app Meshy]<br/>Emite SOS, UPDATE,<br/>MSG_OUT y CMD"]:::person
+    relay["Nodo relay<br/>[Persona · app Meshy]<br/>Reenvía con TTL − 1,<br/>no abre lo sellado"]:::person
     egress["Nodo egress<br/>[Persona · app con internet]<br/>Sube paquetes y<br/>reinyecta respuestas"]:::person
   end
 
-  subgraph bv["Baliza Vital · Render"]
+  subgraph bv["Meshy · Render"]
     backend["Backend<br/>[Sistema · Node]<br/>Egress, buzón, crypto,<br/>incidentes, agente"]:::system
     panel["Panel de rescatistas<br/>[Sistema · web estática]<br/>Mapa en vivo"]:::system
   end

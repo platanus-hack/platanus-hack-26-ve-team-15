@@ -362,7 +362,7 @@ test('un LLM colgado no retrasa los avisos: sale la plantilla pasado LLM_TIMEOUT
     await app.ctx.idle();
     assert.ok(Date.now() - t0 < 2000, 'los borradores corren en paralelo y respetan el timeout');
     assert.equal(app.channels.sent.length, 3);
-    assert.match(app.channels.sent[0].text, /^ALERTA Baliza Vital: Usuario Demo/);
+    assert.match(app.channels.sent[0].text, /^ALERTA Meshy: Usuario Demo/);
     const acks = (await poll(app, phone)).json.messages.map((m) => decodePacket(Buffer.from(m.packet_b64, 'base64')).category);
     assert.deepEqual(acks, [2, 1]);
   } finally { app.close(); }

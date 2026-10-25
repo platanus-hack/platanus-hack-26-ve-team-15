@@ -9,7 +9,7 @@ const MAX_NAMES = 3;
 const MAX_NAME_CHARS = 40;
 
 const TEXT = {
-  needsCode: 'Para aceptar, toca el enlace de invitación que te envió la persona que te agregó en Baliza Vital: el mensaje ya lleva tu código. Si no lo tienes, pídele que te invite de nuevo.',
+  needsCode: 'Para aceptar, toca el enlace de invitación que te envió la persona que te agregó en Meshy: el mensaje ya lleva tu código. Si no lo tienes, pídele que te invite de nuevo.',
   wrongCode: 'Ese código no corresponde a ninguna invitación para este número. Usa el enlace que te enviaron o pide una invitación nueva.',
 };
 
@@ -41,14 +41,14 @@ function namesOf(contacts) {
 
 function confirmation(word, names) {
   return word === 'ACEPTO'
-    ? `Listo: quedaste como contacto de emergencia de ${names} en Baliza Vital. Si necesita ayuda te avisaremos por aquí. Escribe BAJA para dejar de recibir sus avisos.`
-    : `Ya no recibirás avisos de Baliza Vital de ${names}. Para volver a recibirlos, usa el enlace de invitación.`;
+    ? `Listo: quedaste como contacto de emergencia de ${names} en Meshy. Si necesita ayuda te avisaremos por aquí. Escribe BAJA para dejar de recibir sus avisos.`
+    : `Ya no recibirás avisos de Meshy de ${names}. Para volver a recibirlos, usa el enlace de invitación.`;
 }
 
 function confirm(ctx, to, text) {
   ctx.defer(() => ctx.channels.sms.send({
     to, text, kind: 'message', lang: 'es', contactName: to,
-    fields: { userName: 'Baliza Vital', text, reply: '-' }, incident: { incident_id: null },
+    fields: { userName: 'Meshy', text, reply: '-' }, incident: { incident_id: null },
   }));
 }
 

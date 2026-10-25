@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meshy — Pitch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* mismos tokens que apps/android/.../emergency/ui/BalizaTheme.kt */
+    --bg: #111111;
+    --surface: #1c1c1e;
+    --fg: #f2f2f2;
+    --muted: #a0a0a6;
+    --accent: #e53935;
+    --accent-dark: #8e1b1b;
+    --alert: #ff6b6b;
+    --line: #3a3a3f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); color: var(--fg); overflow: hidden;
+    font-family: "Chakra Petch", ui-sans-serif, system-ui, sans-serif; }
+  .slide { position: absolute; inset: 0; display: none; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center; padding: 6vh 8vw; gap: 4vh; }
+  .slide.on { display: flex; }
+  h1 { font-weight: 300; font-size: clamp(2.4rem, 6.2vw, 6rem); line-height: 1.12; letter-spacing: -0.01em; }
+  h1 b { font-weight: 600; color: var(--accent); }
+  p.sub { font-size: clamp(1.2rem, 2.4vw, 2.1rem); color: var(--muted); max-width: 60ch; line-height: 1.35; }
+  .tag { background: var(--accent); color: #fff; font-weight: 600; letter-spacing: .08em;
+    padding: .35em .9em; font-size: clamp(.9rem, 1.6vw, 1.4rem); }
+  .logo { max-height: 52vh; max-width: 70vw; width: auto; height: auto; }
+
+  /* diagrama del mesh */
+  .mesh { display: flex; align-items: center; justify-content: center; gap: 1.2vw; flex-wrap: nowrap; width: 100%; }
+  .node { display: flex; flex-direction: column; align-items: center; gap: .6vh; min-width: 0; }
+  .box { border: 2px solid var(--fg); border-radius: 1.2vw; padding: 1.6vh 1.4vw; min-width: 11vw;
+    font-size: clamp(.9rem, 1.7vw, 1.5rem); }
+  .box.off { border-style: dashed; border-color: var(--muted); color: var(--muted); }
+  .box.on  { border-color: var(--accent); color: #fff; background: var(--accent-dark); }
+  .cap { font-size: clamp(.75rem, 1.2vw, 1rem); color: var(--muted); }
+  .arrow { color: var(--accent); font-size: clamp(1.4rem, 2.6vw, 2.4rem); }
+
+  /* guía de demo */
+  ol.steps { list-style: none; counter-reset: s; text-align: left; display: grid; gap: 2.2vh;
+    font-size: clamp(1.2rem, 2.5vw, 2.2rem); }
+  ol.steps li { counter-increment: s; display: flex; gap: 1.2em; align-items: baseline; }
+  ol.steps li::before { content: counter(s) "."; color: var(--accent); min-width: 1.2em; }
+
+  /* HUD */
+  #timer { position: fixed; top: 2vh; right: 2vw; font-size: 1.6rem; font-variant-numeric: tabular-nums;
+    color: var(--muted); display: none; }
+  #timer.show { display: block; }
+  #timer.over { color: var(--alert); font-weight: 600; }
+  #count { position: fixed; bottom: 2vh; right: 2vw; font-size: .9rem; color: var(--muted); }
+  #notes { position: fixed; left: 0; right: 0; bottom: 0; background: #000d; border-top: 1px solid var(--line);
+    padding: 2vh 4vw; font-size: clamp(.95rem, 1.5vw, 1.3rem); line-height: 1.45; text-align: left;
+    display: none; max-height: 40vh; overflow: auto; }
+  #notes.show { display: block; }
+  #help { position: fixed; bottom: 2vh; left: 2vw; font-size: .85rem; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- 0 · saludo -->
+<section class="slide on" data-notes="Hola, somos el equipo 15. [Presentar a cada integrante en una frase.] Construimos Meshy: un SOS que sale de tu teléfono aunque no tengas internet. (5 s)">
+  <span class="tag">PLATANUS HACK 26 · CARACAS · EQUIPO 15</span>
+  <img class="logo" src="../../project-logo.png" alt="Meshy">
+  <p class="sub">Un SOS que sale de tu teléfono aunque no haya internet.</p>
+</section>
+
+<!-- 1 · problema (~20 s) -->
+<section class="slide" data-notes="Imagina que estás en una carretera sin señal, o que un apagón dejó la zona sin datos. Tu teléfono sirve para todo menos para lo único que necesitas: avisar que estás en peligro. (~20 s) Pausa. Respirar.">
+  <h1>Sin internet, tu teléfono<br>no puede pedir <b>ayuda</b>.</h1>
+  <p class="sub">Justo cuando más lo necesitas.</p>
+</section>
+
+<!-- 2 · solución (~25 s) -->
+<section class="slide" data-notes="Meshy convierte los teléfonos cercanos en una red. Tu SOS salta de teléfono en teléfono por Bluetooth hasta llegar a alguien que sí tiene internet. Ese teléfono lo sube, un agente de IA registra el incidente, avisa a tus contactos por SMS, correo y llamada con voz, y la confirmación vuelve por el mismo camino. (~25 s)">
+  <h1>Tu SOS salta de teléfono<br>en teléfono hasta <b>llegar</b>.</h1>
+  <div class="mesh">
+    <div class="node"><div class="box off">Tu teléfono</div><span class="cap">sin internet</span></div>
+    <span class="arrow">⇄</span>
+    <div class="node"><div class="box off">Teléfono cercano</div><span class="cap">Bluetooth mesh</span></div>
+    <span class="arrow">⇄</span>
+    <div class="node"><div class="box on">Egress</div><span class="cap">con internet</span></div>
+    <span class="arrow">→</span>
+    <div class="node"><div class="box on">Agente IA</div><span class="cap">avisa y responde</span></div>
+    <span class="arrow">→</span>
+    <div class="node"><div class="box">Contactos</div><span class="cap">SMS · correo · voz</span></div>
+  </div>
+</section>
+
+<!-- 3 · ambición (~15 s) -->
+<section class="slide" data-notes="Hoy es un SOS. Pero el mesh y el contrato quedan como un módulo que cualquier superapp de transporte, delivery o pagos puede embeber: su usuario deja de quedarse incomunicado. (Si se enciende el flag, mostramos recargas y rides simulados.) (~15 s)">
+  <h1>Hoy un SOS.<br>Mañana, el botón de emergencia<br>de <b>cualquier superapp</b>.</h1>
+  <p class="sub">Transporte · delivery · pagos</p>
+</section>
+
+<!-- 4 · demo (~125-140 s) -->
+<section class="slide" data-notes="DEMO EN VIVO. Compartir la pantalla del TELÉFONO (meet laptop↔teléfono), ya en modo avión, app configurada, sin login. 1) Mostrar modo avión y sin internet (10 s). 2) Elegir categoría y severidad, tocar SOS (15 s). 3) La UI muestra 'enviando' y NO 'recibido' hasta el ACK firmado (10 s). 4) Señalar el salto intermedio y los saltos por paquete (15 s). 5) Cambiar al dashboard: el incidente aparece en el mapa en vivo (20 s). 6) Llega el ACK al teléfono (10 s). 7) Un contacto responde por SMS o correo; el mensaje aparece en el teléfono y se lee en voz alta (30 s). 8) Si hay tiempo y funciona: llamada con voz IA. Solo afirmar lo que funcione en dispositivos.">
+  <span class="tag">DEMO EN VIVO · 2 MIN</span>
+  <ol class="steps">
+    <li>Modo avión: cero internet</li>
+    <li>SOS con un toque</li>
+    <li>Salta por el mesh · vemos los saltos</li>
+    <li>Aparece en el mapa en vivo</li>
+    <li>Vuelve el ACK firmado al teléfono</li>
+    <li>Un contacto responde y el teléfono lo lee en voz alta</li>
+  </ol>
+</section>
+
+<!-- 5 · cierre -->
+<section class="slide" data-notes="Cierre (~10 s). Funciona sin internet, hoy, en teléfonos reales. Somos el equipo 15, gracias. Quedamos para las preguntas técnicas: firma Ed25519 de cada paquete, sin tocar el cifrado de bitchat, ACK firmado, idempotencia, y texto de contactos tratado como dato no confiable.">
+  <h1>Sin internet.<br>Sin esperar.<br><b>Con respuesta.</b></h1>
+  <p class="sub">Meshy · Equipo 15</p>
+  <p class="cap">github.com/platanus-hack/platanus-hack-26-ve-team-15</p>
+</section>
+
+<div id="timer">0:00</div>
+<div id="count"></div>
+<div id="help">← → navegar · N notas · T cronómetro 3:00 · F pantalla completa</div>
+<div id="notes"></div>
+
+<script>
+(function () {
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var notes = document.getElementById('notes');
+  var count = document.getElementById('count');
+  var timer = document.getElementById('timer');
+  var i = 0, t0 = null, tick = null;
+
+  function show(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach(function (s, k) { s.classList.toggle('on', k === i); });
+    notes.textContent = slides[i].getAttribute('data-notes') || '';
+    count.textContent = (i + 1) + ' / ' + slides.length;
+  }
+  function fmt(ms) {
+    var s = Math.floor(ms / 1000);
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }
+  function toggleTimer() {
+    if (tick) { clearInterval(tick); tick = null; t0 = null; timer.className = ''; return; }
+    t0 = Date.now(); timer.className = 'show';
+    tick = setInterval(function () {
+      var ms = Date.now() - t0;
+      timer.textContent = fmt(ms);
+      // el corte duro es a los 3:01
+      timer.classList.toggle('over', ms > 180000);
+    }, 250);
+    timer.textContent = '0:00';
+  }
+  document.addEventListener('keydown', function (e) {
+    var k = e.key;
+    if (k === 'ArrowRight' || k === 'PageDown' || k === ' ') show(i + 1);
+    else if (k === 'ArrowLeft' || k === 'PageUp') show(i - 1);
+    else if (k === 'Home') show(0);
+    else if (k === 'End') show(slides.length - 1);
+    else if (k === 'n' || k === 'N') notes.classList.toggle('show');
+    else if (k === 't' || k === 'T') toggleTimer();
+    else if (k === 'f' || k === 'F') {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen();
+    }
+  });
+  document.addEventListener('click', function (e) { show(e.clientX > innerWidth / 3 ? i + 1 : i - 1); });
+  show(0);
+})();
+</script>
+</body>
+</html>

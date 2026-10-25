@@ -1,4 +1,4 @@
-# Backend de Baliza Vital
+# Backend de Meshy
 
 API egress, buzón, registro, incidentes, agente de emergencias y mocks de las Fases 4 y 5.
 Implementa `docs/contrato.md` (v1). Node ≥ 22.13, ESM, sin framework: `node:http`, `node:sqlite`,
@@ -192,8 +192,8 @@ variables se usa Twilio y, sin ninguno, la consola (estado `simulated`).
   escribió hace menos de 24 h (lo registra el webhook), y la plantilla en otro caso; si falla una, prueba la
   otra. **Sin `KAPSO_TEMPLATE_*` solo envía texto libre.**
 - **Plantillas a crear y aprobar en Kapso/Meta** (categoría *utility*; los parámetros son posicionales):
-  - `KAPSO_TEMPLATE_ALERT` (primer aviso): `ALERTA Baliza Vital: {{1}} pidió ayuda ({{2}}, gravedad {{3}}). Ubicación: {{4}}. Responde a este mensaje o aquí: {{5}}`
-  - `KAPSO_TEMPLATE_MESSAGE` (mensaje del usuario): `{{1}} te escribe por Baliza Vital: {{2}}. Responde a este mensaje o aquí: {{3}}`
+  - `KAPSO_TEMPLATE_ALERT` (primer aviso): `ALERTA Meshy: {{1}} pidió ayuda ({{2}}, gravedad {{3}}). Ubicación: {{4}}. Responde a este mensaje o aquí: {{5}}`
+  - `KAPSO_TEMPLATE_MESSAGE` (mensaje del usuario): `{{1}} te escribe por Meshy: {{2}}. Responde a este mensaje o aquí: {{3}}`
 - **Webhook** (`POST /v1/webhooks/whatsapp`): exige `X-Webhook-Signature` = HMAC-SHA256 hex del cuerpo crudo
   con `KAPSO_WEBHOOK_SECRET` (401 si no cuadra; sin secreto la ruta no existe, 404). Responde 200 aunque el
   mensaje no corresponda a ningún aviso, para que Kapso no reintente; sus reintentos (~10 s y ~40 s) se

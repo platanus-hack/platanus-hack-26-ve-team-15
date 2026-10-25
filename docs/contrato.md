@@ -1,4 +1,4 @@
-# Contrato Baliza Vital (v1, borrador para congelar)
+# Contrato Meshy (v1, borrador para congelar)
 
 Este documento es el contrato entre Android, backend, agente IA y dashboard. Una vez
 congelado, un cambio requiere acuerdo de los cuatro roles y subir `version`.

@@ -1,4 +1,4 @@
-# Baliza Vital
+# Meshy
 
 **Un SOS que no necesita internet.** Cuando se cae la red, tu celular sigue siendo una baliza:
 el aviso salta de teléfono en teléfono por Bluetooth hasta llegar a alguien que sí tiene conexión.
@@ -41,7 +41,7 @@ conexión. Justo cuando más se necesita avisar a alguien, el teléfono no puede
 
 El alcance de la malla Bluetooth es local (decenas de metros por salto). Las distancias largas
 dependen de que las personas se muevan y de que el servidor empuje las respuestas a nodos cercanos.
-Baliza Vital **no reemplaza a los servicios de emergencia** y en este demo solo usa datos sintéticos.
+Meshy **no reemplaza a los servicios de emergencia** y en este demo solo usa datos sintéticos.
 
 ## Equipo
 

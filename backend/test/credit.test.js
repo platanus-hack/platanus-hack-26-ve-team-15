@@ -199,8 +199,8 @@ test('comprobante por WhatsApp al destinatario: normaliza 0412…, es best-effor
     await live.cmd('recargar_saldo', 2, { ...RECARGA, monto: 5 });
     await live.app.ctx.idle();
     assert.deepEqual(sent.map((m) => m.to), ['584121234567', '584147654321']);
-    assert.match(sent[0].text, /^Baliza Vital: Usuario Demo te envió un Pago Móvil adelantado de US\$12\.50 \(agua mineral\)\. Ref MOCK-[0-9A-F]{8}\. Es una simulación/);
-    assert.match(sent[1].text, /^Baliza Vital: se simuló una recarga de US\$5\.00 \(Movistar\) a tu línea\. Ref MOCK-/);
+    assert.match(sent[0].text, /^Meshy: Usuario Demo te envió un Pago Móvil adelantado de US\$12\.50 \(agua mineral\)\. Ref MOCK-[0-9A-F]{8}\. Es una simulación/);
+    assert.match(sent[1].text, /^Meshy: se simuló una recarga de US\$5\.00 \(Movistar\) a tu línea\. Ref MOCK-/);
     assert.equal(sent[0].kind, 'message');
     assert.equal(sent[0].text.includes('\n'), false);
     // lo pagado por ref repetido no se avisa dos veces

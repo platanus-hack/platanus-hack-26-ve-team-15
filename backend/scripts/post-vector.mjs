@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Postea paquetes de prueba a un servidor Baliza Vital, sin teléfonos.
+// Postea paquetes de prueba a un servidor Meshy, sin teléfonos.
 //
 //   node scripts/post-vector.mjs [--url http://localhost:8080] [--raw] [--label baliza-synthetic-user-1]
 //
