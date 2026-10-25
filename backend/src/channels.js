@@ -8,12 +8,13 @@
 // canales con plantillas (WhatsApp fuera de la ventana de 24 h). El bit `sms` del contrato (channels & 1)
 // se entrega por WhatsApp (Kapso) si está configurado; si no, por SMS (Twilio).
 
+import { toInternational } from './phones.js';
+
 const WINDOW_S = 24 * 3600;
 const DETAIL_MAX = 160;
 
-function digits(s) {
-  return String(s ?? '').replace(/\D/g, '');
-}
+/** El número con código de país (0414… → 58414…), como lo esperan WhatsApp, Twilio y la llamada. */
+const digits = (s) => toInternational(s);
 
 async function postJson(url, headers, body, fetchImpl) {
   const res = await fetchImpl(url, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) });
