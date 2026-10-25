@@ -1,5 +1,6 @@
 // Datos para el panel: lista y detalle de incidentes, eventos y el flujo SSE en vivo.
 import { CATEGORY_LABELS } from '../agent.js';
+import { creditView } from '../credit.js';
 import { HttpError } from '../http.js';
 import { intParam, requireDashboard, route } from './helpers.js';
 import { makeReplyToken, replyUrl } from '../tokens.js';
@@ -48,6 +49,7 @@ function detailHandler({ ctx, config }) {
       notifications,
       primary_reply_url: primaryReplyUrl,
       events: ctx.store.listEvents({ incidentId: i.incident_id }),
+      credit: config.featurePayments ? creditView(ctx, i.sender_id) : null,
     });
   };
 }

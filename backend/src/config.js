@@ -63,6 +63,11 @@ function windowsConfig(env) {
       cmdPerDay: int(env.CMD_MAX_PER_DAY, 10),
       cmdAmountPerDay: int(env.CMD_MAX_AMOUNT_PER_DAY, 500),
     },
+    // Microcrédito simulado (credit.js): cupo por usuario en centavos de USD y comisión en puntos básicos.
+    credit: {
+      limitCents: int(env.CREDIT_LIMIT_CENTS, 5000),
+      feeBps: int(env.CREDIT_FEE_BPS, 500),
+    },
   };
 }
 

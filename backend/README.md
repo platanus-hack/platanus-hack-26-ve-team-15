@@ -80,6 +80,8 @@ FEATURE_PAYMENTS=false
 FEATURE_RIDES=false
 CMD_MAX_PER_DAY=10
 CMD_MAX_AMOUNT_PER_DAY=500
+CREDIT_LIMIT_CENTS=5000               # cupo de microcrédito simulado por usuario (US$ 50.00)
+CREDIT_FEE_BPS=500                    # comisión de servicio: 500 = 5 %
 # Agente (redacción de avisos)
 ANTHROPIC_API_KEY=
 ANTHROPIC_BASE_URL=                   # solo si la clave es de un proxy o pasarela
@@ -140,6 +142,29 @@ node --env-file=../.env scripts/ask-smoke.mjs "¿Qué hago ante una quemadura?" 
 node scripts/ask-vector.mjs --url http://localhost:8080 --q "¿Cómo hago un torniquete?"  # un teléfono emulado, de punta a punta
 ```
 
+## Pago Móvil adelantado con microcrédito (simulado)
+
+Con `FEATURE_PAYMENTS=true`, `pagar` y `recargar_saldo` pueden llevar campos de Pago Móvil y entonces usan un
+cupo de microcrédito estilo Cashea (`credit.js`, `pagomovil.js`; todo sigue siendo un **mock**, no hay banco ni dinero):
+
+```jsonc
+{"cmd":"pagar","ref":5,"args":{"banco":"Banesco","cedula":"V-12345678","telefono":"0412-1234567","monto":25,"concepto":"medicinas"}}
+{"cmd":"recargar_saldo","ref":6,"args":{"operador":"Movistar","telefono":"0414-7654321","monto":10}}
+```
+
+- Cada `sender_id` tiene un cupo de US$ 50 (`CREDIT_LIMIT_CENTS`). El adelanto se devuelve en 3 cuotas cada 14 días más una
+  comisión de servicio de 5 % (`CREDIT_FEE_BPS`). Los montos van en USD (`moneda` es opcional y solo admite `USD`).
+- `banco` y `telefono` (o `destino`) son obligatorios en `pagar`; `cedula` y `beneficiario`, opcionales. El teléfono acepta
+  `0412…`, `+58 412…` o E.164 con «+».
+- El `CMD_RESULT` (≤ 180 caracteres) trae el recibo: `[MOCK] Pago Móvil adelantado US$25.00 a +58412***4567. 3 cuotas de
+  US$8.75 (com. 5%). Cupo restante US$25.00. Ref MOCK-XXXXXXXX`. Sin cupo → `status 1` «Cupo insuficiente: disponible …».
+  Un rechazo (cupo o topes diarios) no descuenta nada, y un `ref` repetido no se cobra dos veces.
+- Si el canal de texto es real (Kapso/Twilio) el destinatario recibe un comprobante por WhatsApp, en segundo plano: si falla, el
+  comando no se ve afectado.
+- Sin campos de Pago Móvil (`beneficiario`, `monto`, `moneda`, `concepto`) siguen siendo el mock plano de siempre, sin cupo.
+- El evento SSE `command` lleva `text` y, si hubo adelanto, `receipt`. `GET /v1/credit/{sender_id}` (con `DASHBOARD_TOKEN` si
+  existe) y el detalle del incidente (`credit`) devuelven cupo, usado, disponible y el plan de cuotas de cada adelanto.
+
 ## Rutas fuera del contrato (extensiones del backend)
 
 | Ruta | Para qué |
@@ -152,6 +177,7 @@ node scripts/ask-vector.mjs --url http://localhost:8080 --q "¿Cómo hago un tor
 | `POST /v1/dev/simulate-reply` (Bearer ADMIN_TOKEN) | Simula la respuesta de un contacto en el demo |
 | `GET /v1/incidents`, `/v1/incidents/{sender}/{incident}`, `/v1/events?after=`, `/v1/stream` (SSE) | Para el dashboard |
 | `POST /v1/notify` `{phone,message,sender_id?,incident_id?}` (Bearer ADMIN_TOKEN) | Envía un texto directo por el canal de texto (WhatsApp/Twilio); sirve para probar el canal. No crea aviso en el incidente |
+| `GET /v1/credit/{sender_id}` | Estado del microcrédito simulado de un usuario (cupo, usado, cuotas) para el panel |
 | `GET /health` | Salud, banderas `features` (pagos/rides/IA) y `channels`: proveedor de cada canal (`kapso`, `twilio`, `resend`, `elevenlabs` o `simulated`) y `whatsapp_webhook` (hay `KAPSO_WEBHOOK_SECRET`). Sin secretos |
 
 ## WhatsApp (Kapso)

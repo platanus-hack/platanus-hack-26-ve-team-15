@@ -1,6 +1,7 @@
 // Todas las rutas de la API, agrupadas por tema.
 import { providerOf } from '../channels.js';
 import { adminRoutes } from './admin.js';
+import { creditRoutes } from './credit.js';
 import { dashboardRoutes } from './dashboard.js';
 import { route } from './helpers.js';
 import { meshRoutes } from './mesh.js';
@@ -31,6 +32,7 @@ export function allRoutes(app) {
     ...repliesRoutes(app),
     ...adminRoutes(app),
     ...notifyRoutes(app),
+    ...creditRoutes(app),
     ...dashboardRoutes(app),
   ];
 }
