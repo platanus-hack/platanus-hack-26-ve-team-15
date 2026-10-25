@@ -284,8 +284,7 @@ class EmergencyApp private constructor(context: Context) {
                 else -> return InviteResult.Failed("El servidor no pudo preparar la invitación. Inténtalo más tarde.")
             }
             val text = InviteLinks.message(profile.displayName, InviteLinks.acceptLink(whatsappNumber, code))
-            return InviteLinks.shareLink(phone, text)?.let { InviteResult.Ready(it) }
-                ?: InviteResult.Failed("El teléfono de ese contacto no tiene números.")
+            return InviteResult.Ready(InviteLinks.shareLink(phone, text))
         }
 
         /** Same data again: the server keeps every verification and answers with the current codes. Null with no server. */

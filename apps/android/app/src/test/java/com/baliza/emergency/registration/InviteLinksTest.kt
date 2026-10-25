@@ -2,7 +2,6 @@ package com.baliza.emergency.registration
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.net.URLDecoder
@@ -20,7 +19,7 @@ class InviteLinksTest {
     @Test
     fun `the invitation goes to the contact and carries the accept link intact after decoding`() {
         val accept = InviteLinks.acceptLink("+56920403095", "K7M2QX9P")
-        val share = InviteLinks.shareLink("+58 (412) 555-0001", InviteLinks.message("José & Ana Pérez", accept))!!
+        val share = InviteLinks.shareLink("+58 (412) 555-0001", InviteLinks.message("José & Ana Pérez", accept))
         assertTrue(share, share.startsWith("https://wa.me/584125550001?text="))
         assertFalse("spaces are %20, not +", share.contains("+"))
         val message = textOf(share)
@@ -30,8 +29,10 @@ class InviteLinksTest {
     }
 
     @Test
-    fun `a phone without digits cannot be invited`() {
-        assertNull(InviteLinks.shareLink("sin número", "hola"))
-        assertNull(InviteLinks.shareLink("", "hola"))
+    fun `a local or empty number opens WhatsApp's chat picker instead of guessing the country`() {
+        for (phone in listOf("0412 555 0001", "4125550001", "sin número", "", "+")) {
+            val link = InviteLinks.shareLink(phone, "hola y adiós")
+            assertEquals(phone, "https://wa.me/?text=hola%20y%20adi%C3%B3s", link)
+        }
     }
 }

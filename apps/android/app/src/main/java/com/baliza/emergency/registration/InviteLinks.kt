@@ -13,8 +13,15 @@ object InviteLinks {
         "Hola, soy $userName. Te agregué como contacto de emergencia en Baliza Vital: si algún día pido ayuda, " +
             "incluso sin internet, te avisarán por aquí. Si aceptas, toca este enlace y envía el mensaje que aparece: $acceptLink"
 
-    /** Opens a chat with [contactPhone] with [text] written. Null if the phone has no digits. */
-    fun shareLink(contactPhone: String, text: String): String? = digits(contactPhone).takeIf { it.isNotEmpty() }?.let { waMe(it, text) }
+    /**
+     * Opens a chat with [contactPhone] with [text] written, when the number is international ("+58 412…"). A local
+     * one ("0412…", common in an address book) cannot be turned into a WhatsApp chat without guessing the country,
+     * so WhatsApp's own chat picker opens instead and the user chooses the contact.
+     */
+    fun shareLink(contactPhone: String, text: String): String {
+        val international = contactPhone.trim().startsWith("+") && digits(contactPhone).isNotEmpty()
+        return if (international) waMe(contactPhone, text) else "https://wa.me/?text=${encode(text)}"
+    }
 
     private fun waMe(phone: String, text: String) = "https://wa.me/${digits(phone)}?text=${encode(text)}"
 
