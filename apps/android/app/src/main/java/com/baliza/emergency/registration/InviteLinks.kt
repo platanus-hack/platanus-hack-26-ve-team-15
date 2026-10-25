@@ -10,7 +10,7 @@ object InviteLinks {
     fun acceptLink(balizaNumber: String, code: String): String = waMe(balizaNumber, "ACEPTO $code")
 
     fun message(userName: String, acceptLink: String): String =
-        "Hola, soy $userName. Te agregué como contacto de emergencia en Baliza Vital: si algún día pido ayuda, " +
+        "Hola, soy $userName. Te agregué como contacto de emergencia en Meshy: si algún día pido ayuda, " +
             "incluso sin internet, te avisarán por aquí. Si aceptas, toca este enlace y envía el mensaje que aparece: $acceptLink"
 
     /**

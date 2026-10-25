@@ -2,6 +2,7 @@ package com.baliza.emergency.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -51,7 +52,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.bitchat.android.R
@@ -63,7 +67,7 @@ import com.bitchat.android.onboarding.PermissionCategory
 import com.bitchat.android.onboarding.PermissionType
 
 /*
- * First-run screens in Baliza Vital's look, always dark. They stand in one for one for bitchat's onboarding
+ * First-run screens in Meshy's look, always dark. They stand in one for one for bitchat's onboarding
  * screens (same states and callbacks), so bitchat's OnboardingCoordinator keeps driving the flow unchanged.
  */
 
@@ -77,11 +81,11 @@ fun BalizaPermissionScreen(modifier: Modifier, permissionCategories: List<Permis
         ) {
             Text("Tu SOS sale aunque no haya señal", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             Text(
-                "Baliza Vital pasa tu alerta de teléfono en teléfono por Bluetooth hasta uno con internet, que avisa a tus contactos. Para eso necesita:",
+                "Meshy pasa tu alerta de teléfono en teléfono por Bluetooth hasta uno con internet, que avisa a tus contactos. Para eso necesita:",
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             permissionCategories.forEach { PermissionRow(it) }
-            Note(Icons.Filled.Lock, "Tu ubicación solo se comparte cuando envías un SOS, y viaja cifrada hasta el servidor de Baliza Vital.")
+            Note(Icons.Filled.Lock, "Tu ubicación solo se comparte cuando envías un SOS, y viaja cifrada hasta el servidor de Meshy.")
         }
     }
 }
@@ -108,7 +112,7 @@ fun BalizaBluetoothScreen(
         )
         BluetoothStatus.NOT_SUPPORTED -> Message(
             modifier, Icons.Filled.BluetoothDisabled, "Este teléfono no tiene Bluetooth",
-            "Puedes usar Baliza Vital, pero tu SOS solo saldrá cuando el teléfono tenga internet.",
+            "Puedes usar Meshy, pero tu SOS solo saldrá cuando el teléfono tenga internet.",
             tone = MaterialTheme.colorScheme.secondary,
             actions = { PrimaryAction("Continuar", onSkip) }
         )
@@ -135,7 +139,7 @@ fun BalizaLocationScreen(
         )
         LocationStatus.NOT_AVAILABLE -> Message(
             modifier, Icons.Filled.LocationOff, "La ubicación no está disponible",
-            "Este teléfono no ofrece servicios de ubicación, y Android los exige para usar el Bluetooth de la baliza.",
+            "Este teléfono no ofrece servicios de ubicación, y Android los exige para usar el Bluetooth de Meshy.",
             tone = MaterialTheme.colorScheme.error
         )
     }
@@ -155,8 +159,8 @@ fun BalizaBatteryScreen(
     when (status) {
         BatteryOptimizationStatus.DISABLED -> Waiting(modifier, "Revisando la batería…")
         BatteryOptimizationStatus.ENABLED -> Message(
-            modifier, Icons.Filled.BatteryAlert, "Deja la baliza encendida",
-            "Android cierra apps en segundo plano para ahorrar batería. Si cierra Baliza Vital, tu teléfono deja de pasar alertas, también las de otras personas.",
+            modifier, Icons.Filled.BatteryAlert, "Deja Meshy encendido",
+            "Android cierra apps en segundo plano para ahorrar batería. Si cierra Meshy, tu teléfono deja de pasar alertas, también las de otras personas.",
             actions = {
                 PrimaryAction("Permitir", onDisableBatteryOptimization, isLoading)
                 SecondaryAction("Ya lo hice", onRetry)
@@ -165,7 +169,7 @@ fun BalizaBatteryScreen(
         )
         BatteryOptimizationStatus.NOT_SUPPORTED -> Message(
             modifier, Icons.Filled.BatteryChargingFull, "La batería no es problema",
-            "Este teléfono no cierra Baliza Vital en segundo plano.",
+            "Este teléfono no cierra Meshy en segundo plano.",
             tone = BalizaColors.Good,
             actions = { PrimaryAction("Continuar", onRetry) }
         )
@@ -176,7 +180,7 @@ fun BalizaBatteryScreen(
 fun BalizaBackgroundLocationScreen(modifier: Modifier, onContinue: () -> Unit, onRetry: () -> Unit, onSkip: () -> Unit) {
     Message(
         modifier, Icons.Filled.LocationOn, "Ubicación todo el tiempo",
-        "Para que la baliza siga pasando alertas con la pantalla apagada, Android pide la ubicación en segundo plano.",
+        "Para que Meshy siga pasando alertas con la pantalla apagada, Android pide la ubicación en segundo plano.",
         note = "En la siguiente pantalla elige «Permitir todo el tiempo». Tu ubicación solo se comparte cuando envías un SOS.",
         actions = {
             PrimaryAction("Continuar", onContinue)
@@ -187,12 +191,12 @@ fun BalizaBackgroundLocationScreen(modifier: Modifier, onContinue: () -> Unit, o
 }
 
 @Composable
-fun BalizaInitializingScreen(modifier: Modifier) = Waiting(modifier, "Encendiendo la baliza…")
+fun BalizaInitializingScreen(modifier: Modifier) = Waiting(modifier, "Encendiendo Meshy…")
 
 @Composable
 fun BalizaInitErrorScreen(modifier: Modifier, errorMessage: String, onRetry: () -> Unit, onOpenSettings: () -> Unit) {
     Message(
-        modifier, Icons.Filled.ErrorOutline, "No pude encender la baliza", errorMessage,
+        modifier, Icons.Filled.ErrorOutline, "No pude encender Meshy", errorMessage,
         tone = MaterialTheme.colorScheme.error,
         actions = {
             PrimaryAction("Reintentar", onRetry)
@@ -219,15 +223,26 @@ private fun Step(modifier: Modifier, actions: @Composable ColumnScope.() -> Unit
 @Composable
 internal fun BalizaBrand() {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFC62828))) {
+        // The app icon as in the logo: dark tile, red outline.
+        Box(
+            Modifier.size(40.dp).clip(RoundedCornerShape(11.dp)).background(BalizaColors.Surface)
+                .border(1.5.dp, BalizaColors.Red, RoundedCornerShape(11.dp))
+        ) {
             // The launcher foreground keeps its art inside the adaptive-icon safe zone, so it is scaled up here.
             Image(
                 painterResource(R.drawable.ic_launcher_foreground), contentDescription = null,
-                modifier = Modifier.fillMaxSize().graphicsLayer(scaleX = 1.5f, scaleY = 1.5f)
+                modifier = Modifier.fillMaxSize().graphicsLayer(scaleX = 1.6f, scaleY = 1.6f)
             )
         }
         Spacer(Modifier.size(12.dp))
-        Text("Baliza Vital", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        // "mesh" light and a bold red "y", like the wordmark.
+        Text(
+            buildAnnotatedString {
+                withStyle(SpanStyle(fontWeight = FontWeight.Light)) { append("mesh") }
+                withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = BalizaColors.Red)) { append("y") }
+            },
+            style = MaterialTheme.typography.headlineSmall
+        )
     }
 }
 
@@ -299,7 +314,7 @@ private fun explain(category: PermissionCategory): Explained = when (category.ty
     PermissionType.MICROPHONE -> Explained(Icons.Filled.Mic, "Micrófono", "Para dictar mensajes sin escribir.")
     PermissionType.NOTIFICATIONS -> Explained(Icons.Filled.Notifications, "Notificaciones", "Para avisarte cuando llegue la confirmación o la respuesta de tus contactos.")
     PermissionType.WIFI_AWARE -> Explained(Icons.Filled.Wifi, "Wi‑Fi cercano", "Para llegar más lejos entre teléfonos cuando el equipo lo permite.")
-    PermissionType.BATTERY_OPTIMIZATION -> Explained(Icons.Filled.BatteryAlert, "Batería", "Para que Android no apague la baliza en segundo plano.")
+    PermissionType.BATTERY_OPTIMIZATION -> Explained(Icons.Filled.BatteryAlert, "Batería", "Para que Android no apague Meshy en segundo plano.")
     PermissionType.OTHER -> Explained(Icons.Filled.Settings, "Otros", category.description)
 }
 

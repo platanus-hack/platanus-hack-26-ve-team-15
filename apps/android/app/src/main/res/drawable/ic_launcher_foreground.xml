@@ -1,21 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Meshy: an M drawn by mesh nodes; the last node, the one with internet, glows red (project-logo-meshy-d.svg). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:viewportWidth="108"
-    android:viewportHeight="108"
     android:width="108dp"
-    android:height="108dp">
-    <!-- Beacon: a dot with signal arcs radiating to both sides. -->
-    <path
-        android:pathData="M54,52.5A7.5,7.5 0 1,1 54,67.5A7.5,7.5 0 1,1 54,52.5Z"
-        android:fillColor="#FFFFFF" />
-    <path
-        android:pathData="M65.6,46.2A18,18 0 0,1 65.6,73.8M42.4,46.2A18,18 0 0,0 42.4,73.8"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="4.5"
-        android:strokeLineCap="round" />
-    <path
-        android:pathData="M73.3,37A30,30 0 0,1 73.3,83M34.7,37A30,30 0 0,0 34.7,83"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="4.5"
-        android:strokeLineCap="round" />
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.105"
+        android:scaleY="0.105"
+        android:translateX="0.45"
+        android:translateY="10.4">
+        <path
+            android:pathData="M300,560L300,250L500,440L700,250"
+            android:strokeColor="#3A3A3F"
+            android:strokeWidth="22"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M700,250L700,560"
+            android:strokeColor="#E53935"
+            android:strokeWidth="22"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M270,560a30,30 0 1,0 60,0a30,30 0 1,0 -60,0zM270,250a30,30 0 1,0 60,0a30,30 0 1,0 -60,0zM470,440a30,30 0 1,0 60,0a30,30 0 1,0 -60,0zM670,250a30,30 0 1,0 60,0a30,30 0 1,0 -60,0z"
+            android:fillColor="#F2F2F2"
+            android:strokeColor="#1C1C1E"
+            android:strokeWidth="12" />
+        <path
+            android:pathData="M622,560a78,78 0 1,0 156,0a78,78 0 1,0 -156,0z"
+            android:fillColor="#E53935"
+            android:fillAlpha="0.16" />
+        <path
+            android:pathData="M656,560a44,44 0 1,0 88,0a44,44 0 1,0 -88,0z"
+            android:fillColor="#E53935"
+            android:strokeColor="#1C1C1E"
+            android:strokeWidth="12" />
+        <path
+            android:pathData="M686,560a14,14 0 1,0 28,0a14,14 0 1,0 -28,0z"
+            android:fillColor="#FFFFFF" />
+    </group>
 </vector>

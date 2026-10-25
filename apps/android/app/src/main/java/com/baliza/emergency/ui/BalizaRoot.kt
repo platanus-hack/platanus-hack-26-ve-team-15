@@ -35,9 +35,9 @@ fun BalizaRoot(vm: BalizaViewModel, onOpenBitchat: () -> Unit) {
             Box(Modifier.fillMaxSize().safeDrawingPadding()) {
                 val boot by vm.boot.collectAsState()
                 when (val b = boot) {
-                    is EmergencyApp.Boot.Loading -> Centered { CircularProgressIndicator(); Text("Preparando tu baliza…") }
+                    is EmergencyApp.Boot.Loading -> Centered { CircularProgressIndicator(); Text("Preparando Meshy…") }
                     is EmergencyApp.Boot.Failed -> Centered {
-                        Text("No pude preparar la baliza.", style = MaterialTheme.typography.titleMedium)
+                        Text("No pude preparar Meshy.", style = MaterialTheme.typography.titleMedium)
                         Text(b.message, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
                     }
                     is EmergencyApp.Boot.Ready -> ReadyContent(vm, b.engine, onOpenBitchat)

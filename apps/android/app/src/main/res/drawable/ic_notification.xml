@@ -1,22 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Meshy's M of mesh nodes, as a white silhouette for the status bar. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <!-- Simple chat bubble icon for notifications -->
-    <path
-        android:fillColor="@android:color/white"
-        android:pathData="M4,4h16c1.1,0 2,0.9 2,2v10c0,1.1 -0.9,2 -2,2H6l-4,4V6C2,4.9 2.9,4 4,4z" />
-    <!-- Terminal cursor -->
-    <path
-        android:fillColor="@android:color/black"
-        android:pathData="M8,9h2v2h-2z" />
-    <!-- Message lines -->
-    <path
-        android:fillColor="@android:color/black"
-        android:pathData="M12,9h6v1h-6z" />
-    <path
-        android:fillColor="@android:color/black"
-        android:pathData="M12,11h4v1h-4z" />
+    <group
+        android:scaleX="0.042"
+        android:scaleY="0.042"
+        android:translateX="-9.3"
+        android:translateY="-5.6">
+        <path
+            android:pathData="M300,560L300,250L500,440L700,250M700,250L700,560"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="44"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M256,560a44,44 0 1,0 88,0a44,44 0 1,0 -88,0zM256,250a44,44 0 1,0 88,0a44,44 0 1,0 -88,0zM456,440a44,44 0 1,0 88,0a44,44 0 1,0 -88,0zM656,250a44,44 0 1,0 88,0a44,44 0 1,0 -88,0zM640,560a60,60 0 1,0 120,0a60,60 0 1,0 -120,0z"
+            android:fillColor="#FFFFFF" />
+    </group>
 </vector>
