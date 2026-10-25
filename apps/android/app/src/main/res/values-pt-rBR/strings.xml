@@ -46,7 +46,6 @@
     <string name="notification_summary_more">e mais %1$d</string>
     <string name="notification_messages_from_people">%1$d mensagens de %2$d pessoas</string>
     <string name="notification_more_conversations">e mais %1$d conversas</string>
-    <string name="notification_active_peers_title">pessoas do bitchat por perto!</string>
     <string name="notification_active_peers_one">1 pessoa por perto</string>
     <string name="notification_active_peers_many">%1$d pessoas por perto</string>
     <string name="notification_new_messages">Novas mensagens</string>
@@ -57,8 +56,6 @@
     <string name="notification_new_activity_in">Nova atividade em %1$s</string>
     <string name="notification_messages_in">Mensagens em %1$s</string>
     <string name="notification_joined_conversation">%1$s entrou na conversa</string>
-    <string name="notification_geohash_summary_title_mentions">bitchat – %1$d menções</string>
-    <string name="notification_geohash_summary_title">bitchat – Chats por localização</string>
     <string name="notification_geohash_summary_text">%1$d mensagens de %2$d locais</string>
     <string name="notification_mesh_mention_title_singular">Mencionado no chat mesh</string>
     <string name="notification_mesh_mention_title_plural">%1$d menções no chat mesh</string>

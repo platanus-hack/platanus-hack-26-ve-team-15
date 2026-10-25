@@ -6,13 +6,22 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.OnBackPressedCallback
 import androidx.compose.runtime.saveable.rememberSaveable
+import com.baliza.emergency.ui.BalizaBackgroundLocationScreen
+import com.baliza.emergency.ui.BalizaBatteryScreen
+import com.baliza.emergency.ui.BalizaBluetoothScreen
+import com.baliza.emergency.ui.BalizaColors
+import com.baliza.emergency.ui.BalizaInitErrorScreen
+import com.baliza.emergency.ui.BalizaInitializingScreen
+import com.baliza.emergency.ui.BalizaLocationScreen
+import com.baliza.emergency.ui.BalizaPermissionScreen
 import com.baliza.emergency.ui.BalizaRoot
+import com.baliza.emergency.ui.BalizaTheme
 import androidx.activity.compose.setContent
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -24,22 +33,15 @@ import androidx.lifecycle.Lifecycle
 import com.bitchat.android.mesh.BluetoothMeshService
 import com.bitchat.android.mesh.MeshService
 import com.bitchat.android.geohash.LocationChannelManager
-import com.bitchat.android.onboarding.BluetoothCheckScreen
 import com.bitchat.android.onboarding.BluetoothStatus
 import com.bitchat.android.onboarding.BluetoothStatusManager
 import com.bitchat.android.onboarding.BatteryOptimizationManager
 import com.bitchat.android.onboarding.BatteryOptimizationPreferenceManager
-import com.bitchat.android.onboarding.BatteryOptimizationScreen
 import com.bitchat.android.onboarding.BatteryOptimizationStatus
-import com.bitchat.android.onboarding.BackgroundLocationPermissionScreen
-import com.bitchat.android.onboarding.InitializationErrorScreen
-import com.bitchat.android.onboarding.InitializingScreen
-import com.bitchat.android.onboarding.LocationCheckScreen
 import com.bitchat.android.onboarding.LocationStatus
 import com.bitchat.android.onboarding.LocationStatusManager
 import com.bitchat.android.onboarding.OnboardingCoordinator
 import com.bitchat.android.onboarding.OnboardingState
-import com.bitchat.android.onboarding.PermissionExplanationScreen
 import com.bitchat.android.onboarding.PermissionManager
 import com.bitchat.android.ui.ChatScreen
 import com.bitchat.android.ui.ChatViewModel
@@ -118,7 +120,11 @@ class MainActivity : OrientationAwareActivity() {
         com.bitchat.android.service.AppShutdownCoordinator.cancelPendingShutdown()
         
         // Enable edge-to-edge display for modern Android look
-        enableEdgeToEdge()
+        // Baliza Vital is always dark: light system-bar icons whatever the system theme is.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+        )
 
         // Initialize permission management
         permissionManager = PermissionManager(this)
@@ -158,15 +164,17 @@ class MainActivity : OrientationAwareActivity() {
         )
         
         setContent {
-            BitchatTheme {
+            BitchatTheme(darkTheme = true) {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
-                    containerColor = MaterialTheme.colorScheme.background
+                    containerColor = BalizaColors.Background
                 ) { innerPadding ->
-                    OnboardingFlowScreen(modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                    )
+                    BalizaTheme {
+                        OnboardingFlowScreen(modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                        )
+                    }
                 }
             }
         }
@@ -233,11 +241,11 @@ class MainActivity : OrientationAwareActivity() {
 
         when (onboardingState) {
             OnboardingState.PERMISSION_REQUESTING -> {
-                InitializingScreen(modifier)
+                BalizaInitializingScreen(modifier)
             }
             
             OnboardingState.BLUETOOTH_CHECK -> {
-                BluetoothCheckScreen(
+                BalizaBluetoothScreen(
                     modifier = modifier,
                     status = bluetoothStatus,
                     onEnableBluetooth = {
@@ -256,7 +264,7 @@ class MainActivity : OrientationAwareActivity() {
             }
             
             OnboardingState.LOCATION_CHECK -> {
-                LocationCheckScreen(
+                BalizaLocationScreen(
                     modifier = modifier,
                     status = locationStatus,
                     onEnableLocation = {
@@ -271,7 +279,7 @@ class MainActivity : OrientationAwareActivity() {
             }
             
             OnboardingState.BATTERY_OPTIMIZATION_CHECK -> {
-                BatteryOptimizationScreen(
+                BalizaBatteryScreen(
                     modifier = modifier,
                     status = batteryOptimizationStatus,
                     onDisableBatteryOptimization = {
@@ -290,7 +298,7 @@ class MainActivity : OrientationAwareActivity() {
             }
             
             OnboardingState.PERMISSION_EXPLANATION -> {
-                PermissionExplanationScreen(
+                BalizaPermissionScreen(
                     modifier = modifier,
                     permissionCategories = permissionManager.getCategorizedPermissions(),
                     onContinue = {
@@ -301,7 +309,7 @@ class MainActivity : OrientationAwareActivity() {
             }
 
             OnboardingState.BACKGROUND_LOCATION_EXPLANATION -> {
-                BackgroundLocationPermissionScreen(
+                BalizaBackgroundLocationScreen(
                     modifier = modifier,
                     onContinue = {
                         onboardingCoordinator.requestBackgroundLocation()
@@ -324,14 +332,14 @@ class MainActivity : OrientationAwareActivity() {
                         // Let ChatViewModel handle navigation state; if it has nothing to close, go back to Baliza
                         if (!chatViewModel.handleBackPressed()) showBitchatChat = false
                     }
-                    ChatScreen(viewModel = chatViewModel)
+                    BitchatTheme(darkTheme = true) { ChatScreen(viewModel = chatViewModel) }
                 } else {
                     BalizaRoot(vm = balizaViewModel, onOpenBitchat = { showBitchatChat = true })
                 }
             }
             
             OnboardingState.ERROR -> {
-                InitializationErrorScreen(
+                BalizaInitErrorScreen(
                     modifier = modifier,
                     errorMessage = errorMessage,
                     onRetry = {

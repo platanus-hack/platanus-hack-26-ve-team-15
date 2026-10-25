@@ -94,7 +94,6 @@
     <string name="notification_summary_more">i jeszcze %1$d</string>
     <string name="notification_messages_from_people">%1$d wiadomości od %2$d osób</string>
     <string name="notification_more_conversations">i jeszcze %1$d rozmów</string>
-    <string name="notification_active_peers_title">👥 bitchatowicze w pobliżu!</string>
     <string name="notification_active_peers_one">1 osoba w pobliżu</string>
     <string name="notification_active_peers_many">%1$d osób w pobliżu</string>
     <string name="notification_new_messages">Nowe wiadomości</string>
@@ -105,8 +104,6 @@
     <string name="notification_new_activity_in">Nowa aktywność w %1$s</string>
     <string name="notification_messages_in">Wiadomości w %1$s</string>
     <string name="notification_joined_conversation">%1$s dołączył(a) do rozmowy</string>
-    <string name="notification_geohash_summary_title_mentions">bitchat - %1$d wzmianek</string>
-    <string name="notification_geohash_summary_title">bitchat - czaty lokalizacyjne</string>
     <string name="notification_geohash_summary_text">%1$d wiadomości z %2$d lokalizacji</string>
     <string name="notification_mesh_mention_title_singular">Wzmianka w czacie Mesh</string>
     <string name="notification_mesh_mention_title_plural">%1$d wzmianek w czacie Mesh</string>
@@ -188,7 +185,6 @@
     <string name="cd_open_map">Otwórz mapę</string>
     <string name="cd_remove_bookmark">Usuń zakładkę</string>
     <string name="cd_teleport">Teleportuj</string>
-    <string name="notification_action_quit_bitchat">Zamknij bitchat</string>
     <string name="about_background_title">działaj w tle</string>
     <string name="about_background_desc">utrzymuj sieć mesh aktywną po zamknięciu aplikacji (usługa pierwszoplanowa)</string>
     <string name="cd_leave_channel">Opuść kanał</string>

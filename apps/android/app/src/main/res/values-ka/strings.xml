@@ -46,7 +46,6 @@
     <string name="notification_summary_more">და კიდევ %1$d</string>
     <string name="notification_messages_from_people">%2$d ადამიანიდან %1$d შეტყობინება</string>
     <string name="notification_more_conversations">და კიდევ %1$d საუბარი</string>
-    <string name="notification_active_peers_title">bitchatter-ები ახლოს!</string>
     <string name="notification_active_peers_one">1 ადამიანი ახლოს</string>
     <string name="notification_active_peers_many">ახლოს %1$d ადამიანი</string>
     <string name="notification_new_messages">ახალი შეტყობინებები</string>
@@ -57,8 +56,6 @@
     <string name="notification_new_activity_in">ახალი აქტივობა %1$s-ში</string>
     <string name="notification_messages_in">შეტყობინებები %1$s-ში</string>
     <string name="notification_joined_conversation">%1$s შეუერთდა საუბარს</string>
-    <string name="notification_geohash_summary_title_mentions">bitchat – %1$d ხსენება</string>
-    <string name="notification_geohash_summary_title">bitchat – მდებარეობის ჩათები</string>
     <string name="notification_geohash_summary_text">%2$d ადგილიდან %1$d შეტყობინება</string>
     <string name="notification_mesh_mention_title_singular">mesh-ჩათში ხსენება</string>
     <string name="notification_mesh_mention_title_plural">mesh-ჩათში %1$d ხსენება</string>

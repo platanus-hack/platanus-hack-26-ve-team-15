@@ -79,7 +79,6 @@
     <string name="notification_summary_more">і ще %1$d</string>
     <string name="notification_messages_from_people">%1$d повідомлень від %2$d людей</string>
     <string name="notification_more_conversations">і ще %1$d розмов</string>
-    <string name="notification_active_peers_title">👥 bitchat-користувачі поруч!</string>
     <string name="notification_active_peers_one">1 людина поруч</string>
     <string name="notification_active_peers_many">%1$d людей поруч</string>
     <string name="notification_new_messages">Нові повідомлення</string>
@@ -90,8 +89,6 @@
     <string name="notification_new_activity_in">Нова активність у %1$s</string>
     <string name="notification_messages_in">Повідомлення в %1$s</string>
     <string name="notification_joined_conversation">%1$s приєднався(-лася) до розмови</string>
-    <string name="notification_geohash_summary_title_mentions">bitchat - %1$d згадок</string>
-    <string name="notification_geohash_summary_title">bitchat - геочати</string>
     <string name="notification_geohash_summary_text">%1$d повідомлень з %2$d місць</string>
     <string name="notification_mesh_mention_title_singular">Згадка в Mesh-чаті</string>
     <string name="notification_mesh_mention_title_plural">%1$d згадок у Mesh-чаті</string>
@@ -173,7 +170,6 @@
     <string name="cd_open_map">Відкрити карту</string>
     <string name="cd_remove_bookmark">Прибрати закладку</string>
     <string name="cd_teleport">Телепортуватися</string>
-    <string name="notification_action_quit_bitchat">Закрити bitchat</string>
     <string name="about_background_title">працювати у фоновому режимі</string>
     <string name="about_background_desc">підтримувати mesh активним, коли додаток закрито (фонова служба)</string>
     <string name="cd_leave_channel">Вийти з каналу</string>

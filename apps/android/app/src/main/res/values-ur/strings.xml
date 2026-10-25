@@ -46,7 +46,6 @@
     <string name="notification_summary_more">اور %1$d مزید</string>
     <string name="notification_messages_from_people">%2$d لوگوں سے %1$d پیغامات</string>
     <string name="notification_more_conversations">اور %1$d مزید گفتگو</string>
-    <string name="notification_active_peers_title">قریب میں bitchatter!</string>
     <string name="notification_active_peers_one">قریب میں 1 شخص</string>
     <string name="notification_active_peers_many">قریب میں %1$d لوگ</string>
     <string name="notification_new_messages">نئے پیغامات</string>
@@ -57,8 +56,6 @@
     <string name="notification_new_activity_in">%1$s میں نئی سرگرمی</string>
     <string name="notification_messages_in">%1$s میں پیغامات</string>
     <string name="notification_joined_conversation">%1$s گفتگو میں شامل ہوا</string>
-    <string name="notification_geohash_summary_title_mentions">bitchat – %1$d ذکر</string>
-    <string name="notification_geohash_summary_title">bitchat – مقام چیٹس</string>
     <string name="notification_geohash_summary_text">%2$d مقامات سے %1$d پیغامات</string>
     <string name="notification_mesh_mention_title_singular">میش چیٹ میں ذکر</string>
     <string name="notification_mesh_mention_title_plural">میش چیٹ میں %1$d ذکر</string>

@@ -103,8 +103,6 @@
   <string name="notification_new_activity_in">פעילות חדשה ב-%1$s</string>
   <string name="notification_messages_in">הודעות ב-%1$s</string>
   <string name="notification_joined_conversation">%1$s הצטרף/ה לשיחה</string>
-  <string name="notification_geohash_summary_title_mentions">bitchat - %1$d אזכורים</string>
-  <string name="notification_geohash_summary_title">bitchat - צ׳אטים לפי מיקום</string>
   <string name="notification_geohash_summary_text">%1$d הודעות מ-%2$d מיקומים</string>
   <string name="notification_mesh_mention_title_singular">אוזכרת בצ׳אט Mesh</string>
   <string name="notification_mesh_mention_title_plural">%1$d אזכורים בצ׳אט Mesh</string>
@@ -190,7 +188,6 @@
   <string name="cd_open_map">פתח מפה</string>
   <string name="cd_remove_bookmark">הסר סימנייה</string>
   <string name="cd_teleport">טלפורט</string>
-  <string name="notification_action_quit_bitchat">צא מ-bitchat</string>
   <string name="about_background_title">הפעל ברקע</string>
   <string name="about_background_desc">שמור על רשת ה-Mesh פעילה כאשר האפליקציה סגורה (שירות חזית)</string>
   <string name="cd_leave_channel">עזוב ערוץ</string>

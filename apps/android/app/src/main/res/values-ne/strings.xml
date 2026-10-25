@@ -46,7 +46,6 @@
     <string name="notification_summary_more">र %1$d थप</string>
     <string name="notification_messages_from_people">%1$d सन्देश %2$d जनाबाट</string>
     <string name="notification_more_conversations">र %1$d अरू कुराकानी</string>
-    <string name="notification_active_peers_title">नजिकै bitchatter हरू!</string>
     <string name="notification_active_peers_one">१ जना नजिकै</string>
     <string name="notification_active_peers_many">%1$d जना नजिकै</string>
     <string name="notification_new_messages">नयाँ सन्देश</string>
@@ -57,8 +56,6 @@
     <string name="notification_new_activity_in">%1$s मा नयाँ गतिविधि</string>
     <string name="notification_messages_in">%1$s मा सन्देश</string>
     <string name="notification_joined_conversation">%1$s वार्तालापमा सामेल भयो</string>
-    <string name="notification_geohash_summary_title_mentions">bitchat – %1$d उल्लेख</string>
-    <string name="notification_geohash_summary_title">bitchat – स्थान च्याट</string>
     <string name="notification_geohash_summary_text">%2$d स्थानबाट %1$d सन्देश</string>
     <string name="notification_mesh_mention_title_singular">मेष च्याटमा उल्लेख</string>
     <string name="notification_mesh_mention_title_plural">मेष च्याटमा %1$d उल्लेख</string>

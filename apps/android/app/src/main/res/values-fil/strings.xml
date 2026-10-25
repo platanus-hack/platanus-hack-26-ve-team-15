@@ -46,7 +46,6 @@
     <string name="notification_summary_more">at %1$d pa</string>
     <string name="notification_messages_from_people">%1$d mensahe mula sa %2$d tao</string>
     <string name="notification_more_conversations">at %1$d pang usapan</string>
-    <string name="notification_active_peers_title">mga bitchatter na malapit!</string>
     <string name="notification_active_peers_one">1 tao sa paligid</string>
     <string name="notification_active_peers_many">%1$d tao sa paligid</string>
     <string name="notification_new_messages">Mga bagong mensahe</string>
@@ -57,8 +56,6 @@
     <string name="notification_new_activity_in">Bagong aktibidad sa %1$s</string>
     <string name="notification_messages_in">Mga mensahe sa %1$s</string>
     <string name="notification_joined_conversation">Sumali si %1$s sa usapan</string>
-    <string name="notification_geohash_summary_title_mentions">bitchat – %1$d banggit</string>
-    <string name="notification_geohash_summary_title">bitchat – mga chat sa lokasyon</string>
     <string name="notification_geohash_summary_text">%1$d mensahe mula sa %2$d lokasyon</string>
     <string name="notification_mesh_mention_title_singular">Nabanggit sa Mesh Chat</string>
     <string name="notification_mesh_mention_title_plural">%1$d banggit sa Mesh Chat</string>
