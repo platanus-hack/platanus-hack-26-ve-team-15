@@ -262,17 +262,22 @@ class EmergencyApp private constructor(context: Context) {
             val profile = _profile.value ?: return InviteResult.Failed("Primero completa el registro.")
             val phone = profile.contacts.firstOrNull { it.index == contactIndex }?.sms
                 ?: return InviteResult.Failed("Ese contacto no tiene teléfono.")
-            val code = inviteStore.load()[contactIndex] ?: refreshInvites(profile)[contactIndex]
-                ?: return InviteResult.Failed("Necesitas internet una vez para preparar la invitación.")
+            val code = inviteStore.load()[contactIndex] ?: when (val r = registerAgain(profile)) {
+                is RegistrationResult.Success -> saveInvites(r)[contactIndex]
+                    ?: return InviteResult.Failed("El servidor todavía no prepara invitaciones: hay que actualizarlo.")
+                is RegistrationResult.Network -> return InviteResult.Failed("Necesitas internet una vez para preparar la invitación.")
+                null -> return InviteResult.Failed("El servidor no está configurado en esta versión.")
+                else -> return InviteResult.Failed("El servidor no pudo preparar la invitación. Inténtalo más tarde.")
+            }
             val text = InviteLinks.message(profile.displayName, InviteLinks.acceptLink(whatsappNumber, code))
             return InviteLinks.shareLink(phone, text)?.let { InviteResult.Ready(it) }
                 ?: InviteResult.Failed("El teléfono de ese contacto no tiene números.")
         }
 
-        private suspend fun refreshInvites(profile: ContactProfile): Map<Int, String> {
-            val url = settings.baseUrl.takeIf { it.isNotBlank() } ?: return emptyMap()
-            val result = RegistrationRepository(identityStore, RegistrationClient(url)).register(profile.displayName, profile.contacts)
-            return if (result is RegistrationResult.Success) saveInvites(result) else emptyMap()
+        /** Same data again: the server keeps every verification and answers with the current codes. Null with no server. */
+        private suspend fun registerAgain(profile: ContactProfile): RegistrationResult? {
+            val url = settings.baseUrl.takeIf { it.isNotBlank() } ?: return null
+            return RegistrationRepository(identityStore, RegistrationClient(url)).register(profile.displayName, profile.contacts)
         }
 
         suspend fun startSos(
