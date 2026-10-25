@@ -45,6 +45,8 @@ import androidx.compose.ui.unit.sp
 import com.baliza.emergency.app.ContactProfile
 import com.baliza.emergency.app.SosLabels
 import com.baliza.emergency.ask.AskStatus
+import com.baliza.emergency.pay.PayStatus
+import com.baliza.emergency.pay.PaymentRequest
 import com.baliza.emergency.replies.Reply
 import com.baliza.emergency.sos.SosSender
 import com.baliza.emergency.sos.SosState
@@ -59,9 +61,13 @@ fun SosScreen(
     status: SosStatus,
     ask: AskStatus,
     askError: String?,
+    pay: PayStatus,
+    payError: String?,
     error: String?,
     onAsk: (String) -> Unit,
     onResetAsk: () -> Unit,
+    onPay: (PaymentRequest) -> Unit,
+    onResetPay: () -> Unit,
     onStart: (category: Int, severity: Int, publicText: String, note: String, contacts: Set<Int>) -> Unit,
     onCancel: () -> Unit,
     onDismissError: () -> Unit,
@@ -85,7 +91,10 @@ fun SosScreen(
 
         if (active) {
             StatusCard(status)
-            if (SosLabels.canAsk(status.state)) AskCard(ask, askError, onAsk, onResetAsk)
+            if (SosLabels.canAsk(status.state)) {
+                AskCard(ask, askError, onAsk, onResetAsk)
+                PayCard(pay, payError, onPay, onResetPay)
+            }
             OutlinedButton(onClick = { confirmCancel = true }, modifier = Modifier.fillMaxWidth()) { Text("Cancelar aviso") }
         } else {
             Text("¿Qué pasa?", style = MaterialTheme.typography.titleMedium)
